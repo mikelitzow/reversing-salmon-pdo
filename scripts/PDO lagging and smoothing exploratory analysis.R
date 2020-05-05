@@ -5,11 +5,13 @@ library(maps)
 library(mapdata)
 library(chron)
 library(fields)
+library(FactoMineR)
+library(oce)
 
 # PDO isn't currently being updated on JISAO website - 
 # estimate missing values from ERSSTv5
 
-download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1950-01-01):1:(2020-2-01)][(0.0):1:(0.0)][(20):1:(66)][(132):1:(250)]", "data/ersst")
+download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-2-01)][(0.0):1:(0.0)][(20):1:(66)][(132):1:(250)]", "data/ersst")
 
 # load and process SST data
 nc <- nc_open("data/ersst")
@@ -35,17 +37,9 @@ sst.lat <- rep(sst.y, length(sst.x))
 sst.lon <- rep(sst.x, each = length(sst.y))   
 dimnames(SST) <- list(as.character(sst.d), paste("N", sst.lat, "E", sst.lon, sep=""))
 
-# Limit to 20-66 deg. N, 132-250 deg. E:
-drop <- sst.lat > 66
-SST[,drop] <- NA
-
-drop <- sst.lon < 132
-SST[,drop] <- NA
-
 # limit to Jan 1900 - Dec 1993 and later
-sst.d[c(553,1680)]
-
-SST <- SST[553:1680,]
+yr <- years(sst.d)
+SST <- SST[yr %in% 1900:1993,]
 
 # plot to check
 SST.mean <- colMeans(SST)
@@ -68,22 +62,64 @@ mu <- mu[rep(1:12, nrow(SST)/12),]  # Replicate means matrix for each year at ea
 # (i.e. "stack" monthly means on top of each other 112 times!)
 X.anom <- X - mu 
 
-SST.pca <- svd(cov(X.anom))
+# detrend and fit weigted EOF
+y <- 1:nrow(X.anom)
+ff <- function(x) resid(lm(x ~ y))
+X.anom.detr <- apply(X.anom, 2, ff)
+
+# get a vector of weights (square root of the cosine of latitude)
+lat.weights <- sst.lat[!land]
+weight <- sqrt(cos(lat.weights*pi/180))
+
+# EOF by era
+EOF <- svd.triplet(cov(X.anom.detr), col.w=weight) #weighting the columns
+
+# and plot loadings to check
+# get loadings 
+eig.1 <- EOF$U[,1]
+
+# set colors
+new.col <- oceColorsPalette(64)
+
+# and plot
+# set the limit for plotting 
+lim <- range(eig.1)
+
+z <- rep(NA, ncol(X.anom))
+z[!land] <- eig.1
+z <- t(matrix(z, length(sst.y))) 
+
+image(sst.x,sst.y,z, col=new.col, zlim=c(-lim[2], lim[2]), xlab = "", ylab = "", yaxt="n", xaxt="n")
+
+contour(sst.x, sst.y, z, add=T, drawlabels = F, lwd=0.7, col="grey") 
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'China', 'North Korea'), 
+    fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col="darkgoldenrod3")
+map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
+# looks reasonable!
 
 # plot pc1 to check
 
-pc1 <- X.anom %*% SST.pca$u[,1]
+pc1 <- X.anom.detr %*% EOF$U[,1]
 pc1 <- as.vector(scale(pc1))  # Scale to unit variance (to compare to "true PDO")
 
-pc1 <- -pc1  # Reverse sign of PC 1 to match "true PDO" (see below)
+pc1 <- -pc1  # Reverse sign of PC 1 to match "true PDO" 
 
 xx <- seq(1900+0.5/12, 1993+11.5/12, length=94*12)  # for plotting (decimal year)
 plot(xx, pc1, type="l")
 abline(v=1977, lty=2)
 
-# check for warming in mean anomalies at this scale - none evident
-plot(1:nrow(X), rowMeans(X.anom), type="l")
+# load real PDO
+download.file("http://jisao.washington.edu/pdo/PDO.latest", "data/pdo") # uncomment to load
+names <- read.table("data/pdo", skip=30, nrows=1, as.is = T)
+pdo <- read.table("data/pdo", skip=31, nrows=119, fill=T, col.names = names)
+pdo$YEAR <- 1900:(1899+nrow(pdo)) # drop asterisks!
+pdo <- pdo %>%
+  tidyr::gather(month, value, -YEAR) %>% # not loading tidyr because I think it conflicts with maps!
+  dplyr::arrange(YEAR)
 
+plot(pdo$value[pdo$YEAR %in% 1900:1993], pc1)
+
+cor(pdo$value[pdo$YEAR %in% 1900:1993], pc1) # only 0.808!! # try with svd on correlation matrix
 # now get the 1900-2019 values to calculate the full time series of the estimated PDO!
 
 # reload and re-process
