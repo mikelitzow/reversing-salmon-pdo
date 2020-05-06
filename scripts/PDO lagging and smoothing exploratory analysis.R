@@ -32,6 +32,8 @@ names(winter.pdo) <- c("Year", "NCDC.PDO1")
 # load salmon catch data
 dat <- read.csv("data/salmon.and.covariate.data.csv")
 
+# lag back to catch year to make the era definitions match up across spp.!
+dat$catch.year <- ifelse(dat$species=="Sockeye", dat$Year+2, dat$Year+1)
 
 # add NCDC version of PDO!
 dat <- left_join(dat, winter.pdo)
@@ -61,8 +63,8 @@ winter.pdo$NCDC.PDO3 <- rollmean(winter.pdo$NCDC.PDO1, 3, align = "center", fill
 dat <- left_join(dat, winter.pdo)
 
 # now get cross corrs for each species and smoothing for data in each era!
-dat$era <- ifelse(dat$Year <= 1988, "1965-1988",
-                  ifelse(dat$Year %in% 1989:2013, "1989-2013", NA))
+dat$era <- ifelse(dat$catch.year <= 1988, "1965-1988",
+                  ifelse(dat$catch.year %in% 1989:2013, "1989-2013", NA))
 
 
 # lump pinks - short time series
@@ -104,19 +106,26 @@ cross.corr <- cross.corr %>%
 # set colors
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
+
+# and reorder spp.
+cross.corr$plot.order <- ifelse(cross.corr$spp=="Pink", 1, 
+                                ifelse(cross.corr$spp=="Sockeye", 2, 3))
+
+cross.corr$spp <- reorder(cross.corr$spp, cross.corr$plot.order)
+
 ggplot(cross.corr, aes(lag, value, fill=name)) +
   geom_bar(stat="identity", position="dodge") +
   scale_fill_manual(values=cb[2:4], 
-                    labels=c("Winter PDO: year of ocean entry", 
-                             "Winter PDO: year of and year after ocean entry", 
-                             "Winter PDO: year before, year of, and year after")) +
+                    labels=c("One-year mean", 
+                             "Two-year rolling mean", 
+                             "Three-year rolling mean")) +
   facet_grid(spp~era) +
   geom_hline(yintercept = 0, col="dark grey") +
   ylab("Pearson correlation") +
   xlab("Lag (years)") +
-  theme(legend.position = "top", legend.direction="vertical", legend.title = element_blank())
+  theme(legend.position = "top", legend.direction="horizontal", legend.title = element_blank())
 
-ggsave("figs/PDO-catch correlations at different lags.png", width=5, height = 7, units='in')
+ggsave("figs/PDO-catch correlations at different lags.png", width=5, height = 6, units='in')
 
 #############
 # now, save as a new data file for use in the stan models!

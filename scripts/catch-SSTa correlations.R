@@ -14,6 +14,8 @@ library(maptools)
 library(mapdata)
 library(zoo)
 library(oce)
+library(tidync)
+library(RNetCDF)
 
 # # I have catch data in spearate files for each management area
 # # clean up and combine data sets
@@ -133,22 +135,29 @@ library(oce)
 # # catch-1 for pink/coho, catch-2 for sockeye
 # raw.dat$entry.year <- ifelse(raw.dat$species %in% c("Pink-even", "Pink-odd", "Coho"), raw.dat$Year-1, raw.dat$Year-2)
 
-raw.dat <- read.csv("salmon.and.covariate.data.csv")
+raw.dat <- read.csv("data/salmon.and.covariate.data.csv")
 
 # note that years in this file are already lagged to ocean entry!
+# re-lag to define catch year!
+raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat$Year+1)
 
 # load ERSST
 # uncomment these lines to download data
-# # identify latest year and month needed
-# year <- 2019
-# month <- "07"
-# 
-# URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
-# 
-# download.file(URL, "data/North.Pacific.ersst")
+# identify latest year and month needed
+year <- 2019
+month <- "07"
+
+URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
+
+download.file(URL, "data/North.Pacific.ersst")
 
 # open netcdf file of SST data
 nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
+nc <- nc_open("data/North.Pacific.ersst")
+
+nc <- system.file("data/North.Pacific.ersst", package = "tidync")
+tidync(nc)
+
 
 # extract dates
 ncvar_get(nc, "time")   # seconds since 1-1-1970

@@ -11,6 +11,7 @@ library(nlme)
 library(ggplot2)
 library(MARSS)
 library(overlapping)
+library(RNetCDF)
 
 dat <- read.csv("data/climate.data.csv", row.names = 1)
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
