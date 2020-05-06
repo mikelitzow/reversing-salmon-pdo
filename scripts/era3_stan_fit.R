@@ -625,15 +625,3 @@ g <- ggplot(dat3) +
   labs(x = "PDO", y = "Catch anomaly", color = "Species") +
   theme_bw()
 print(g)
-© 2020 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
