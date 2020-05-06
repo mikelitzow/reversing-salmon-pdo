@@ -14,8 +14,7 @@ library(maptools)
 library(mapdata)
 library(zoo)
 library(oce)
-library(tidync)
-library(RNetCDF)
+
 
 # # I have catch data in spearate files for each management area
 # # clean up and combine data sets
@@ -155,10 +154,6 @@ download.file(URL, "data/North.Pacific.ersst")
 nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
 nc <- nc_open("data/North.Pacific.ersst")
 
-nc <- system.file("data/North.Pacific.ersst", package = "tidync")
-tidync(nc)
-
-
 # extract dates
 ncvar_get(nc, "time")   # seconds since 1-1-1970
 raw <- ncvar_get(nc, "time")
@@ -207,11 +202,18 @@ win.SST <- apply(win.SST, 2, f)
 # and smooth each cell as 3-yr running mean
 # I'm doing this b/c analysis shows that catch most strongly 
 # responds to SST over 3-yr time scales
-f <- function(x) rollmean(x, 3, fill=NA)
-win.SST <- apply(win.SST, 2, f)
+# also adding 2-yr rolling mean and retaining 1-yr for consistency with PDO
+
+f3 <- function(x) rollmean(x, 3, fill=NA)
+win.SST.3 <- apply(win.SST, 2, f3)
+
+f2 <- function(x) rollmean(x, 2, align="right", fill=NA)
+win.SST.2 <- apply(win.SST, 2, f2)
+
+win.SST.1 <- win.SST # and the unsmoothed version!
 
 # plot to check
-SST.mean <- colMeans(win.SST, na.rm=T)
+SST.mean <- colMeans(win.SST.3, na.rm=T)
 z <- t(matrix(SST.mean,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=tim.colors(64))
 contour(sst.x, sst.y, z, add=T) 
@@ -223,47 +225,46 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 # first GOA sockeye
 winter.sockeye.65.88 <- winter.sockeye.89.13 <- winter.sockeye.14.19 <- NA
 
-for(j in 1:ncol(win.SST)){
+for(j in 1:ncol(win.SST.3)){
   # note that we are using catch year as the nominal year matching the proposed eras
    # j <- 1
   winter.sockeye.65.88[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1963:1986, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 1963:1986, j], 
         raw.dat$catch[raw.dat$species=="Sockeye" & 
-                                      raw.dat$Year %in% 1963:1986])
+                                      raw.dat$catch.year %in% 1965:1988]) # 2-yr lag!
   
   winter.sockeye.89.13[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1987:2011, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 1987:2011, j], 
         raw.dat$catch[raw.dat$species=="Sockeye" & 
-                        raw.dat$Year %in% 1987:2011])
+                        raw.dat$catch.year %in% 1989:2013])
   
   winter.sockeye.14.19[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 2012:2017, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 2012:2017, j], 
         raw.dat$catch[raw.dat$species=="Sockeye" & 
-                        raw.dat$Year %in% 2012:2017])
+                        raw.dat$catch.year %in% 2014:2019])
 }
 
 # now coho!
 winter.coho.65.88 <- winter.coho.89.13 <- winter.coho.14.19 <- NA
 
-for(j in 1:ncol(win.SST)){
+for(j in 1:ncol(win.SST.3)){
   # note that we are using catch year as the nominal year matching the proposed eras
   # j <- 1
   winter.coho.65.88[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1964:1987, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 1964:1987, j], 
         raw.dat$catch[raw.dat$species=="Coho" & 
-                        raw.dat$Year %in% 1964:1987])
+                        raw.dat$catch.year %in% 1965:1988]) # one-year lag
   
   winter.coho.89.13[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1988:2012, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 1988:2012, j], 
         raw.dat$catch[raw.dat$species=="Coho" & 
-                        raw.dat$Year %in% 1988:2012])
+                        raw.dat$catch.year %in% 1989:2013])
   
   winter.coho.14.19[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 2013:2018, j], 
+    cor(win.SST.3[rownames(win.SST.3) %in% 2013:2018, j], 
         raw.dat$catch[raw.dat$species=="Coho" & 
-                        raw.dat$Year %in% 2013:2018])
+                        raw.dat$catch.year %in% 2014:2019])
 }
-
 
 # now pink!
 # combining odd and even for our purposes...
@@ -271,38 +272,33 @@ winter.pink.65.88 <- winter.pink.89.13 <- winter.pink.14.19 <- NA
 
 pink.combined <- raw.dat %>%
   filter(species %in% c("Pink-odd", "Pink-even")) %>%
-  select(Year, species, catch) %>%
+  select(Year, species, catch, catch.year) %>%
   arrange(Year)
 
 pink.combined <- na.omit(pink.combined)
 ggplot(pink.combined, aes(Year, catch)) +
   geom_line()
 
-for(j in 1:ncol(win.SST)){
+for(j in 1:ncol(win.SST.3)){
   # note that we are using catch year as the nominal year matching the proposed eras
   # j <- 1
   winter.pink.65.88[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1964:1987, j], 
-        pink.combined$catch[pink.combined$Year %in% 1964:1987])
+    cor(win.SST.3[rownames(win.SST.3) %in% 1964:1987, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1965:1988]) # 1-yr lag
   
   winter.pink.89.13[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 1988:2012, j], 
-        pink.combined$catch[pink.combined$Year %in% 1988:2012])
+    cor(win.SST.3[rownames(win.SST.3) %in% 1988:2012, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1989:2013])
   
   winter.pink.14.19[j] <- 
-    cor(win.SST[rownames(win.SST) %in% 2013:2018, j], 
-        pink.combined$catch[pink.combined$Year %in% 2013:2018])
+    cor(win.SST.3[rownames(win.SST.3) %in% 2013:2018, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 2014:2019])
 }
 
 
-png("correlations with 3-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
+png("figs/correlations with 3-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
 
 par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
-# new.col <- tim.colors(64)
-# grays <- c("gray90", "gray89", "gray88",
-#            "gray87","gray86")
-# 
-# new.col[27:36] <- c(grays[5:1], grays[1:5])
 
 new.col <- oceColorsPalette(64)
 
@@ -389,6 +385,329 @@ map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 
 
 
 dev.off()
+
+#############################################################################
+# now the same thing for 2-yr mean SST to evaluate the effect of smoothing! #
+#############################################################################
+
+# first GOA sockeye
+winter.sockeye.65.88 <- winter.sockeye.89.13 <- winter.sockeye.14.19 <- NA
+
+for(j in 1:ncol(win.SST.2)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.sockeye.65.88[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1963:1986, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 1965:1988]) # 2-yr lag!
+  
+  winter.sockeye.89.13[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1987:2011, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 1989:2013])
+  
+  winter.sockeye.14.19[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 2012:2017, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 2014:2019])
+}
+
+# now coho!
+winter.coho.65.88 <- winter.coho.89.13 <- winter.coho.14.19 <- NA
+
+for(j in 1:ncol(win.SST.2)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.coho.65.88[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1964:1987, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 1965:1988]) # one-year lag
+  
+  winter.coho.89.13[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1988:2012, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 1989:2013])
+  
+  winter.coho.14.19[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 2013:2018, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 2014:2019])
+}
+
+# now pink!
+# combining odd and even for our purposes...
+winter.pink.65.88 <- winter.pink.89.13 <- winter.pink.14.19 <- NA
+
+for(j in 1:ncol(win.SST.2)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.pink.65.88[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1964:1987, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1965:1988]) # 1-yr lag
+  
+  winter.pink.89.13[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 1988:2012, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1989:2013])
+  
+  winter.pink.14.19[j] <- 
+    cor(win.SST.2[rownames(win.SST.2) %in% 2013:2018, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 2014:2019])
+}
+
+
+png("figs/correlations with 2-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
+
+par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
+
+new.col <- oceColorsPalette(64)
+
+lim <- c(-1,1)
+# first, sockeye
+z <- t(matrix(winter.sockeye.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+# map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
+mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.88)
+mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-1)
+
+z <- t(matrix(winter.sockeye.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-1)
+
+z <- t(matrix(winter.sockeye.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-1)
+
+# now pink
+par(mar=c(0.5,0.5,0.5,0.5))
+
+z <- t(matrix(winter.pink.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5)
+
+z <- t(matrix(winter.pink.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+z <- t(matrix(winter.pink.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+# coho
+par(mar=c(1.5,0.5,0,0.5))
+z <- t(matrix(winter.coho.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("Coho", outer=T, cex=1.2, side=2, adj=0.15)
+
+z <- t(matrix(winter.coho.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+# add legend strip
+mt.cex <- 1.1
+l.mar <- 3
+l.cex <- 1
+l.l <- 1.2
+tc.l <- -0.2
+
+z[1,1] <- -1; z[66,26] <- 1
+image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r", 
+           smallplot = c(0,1,0.03,0.08), 
+           legend.cex=1, col=new.col,
+           legend.mar=l.mar, legend.line=l.l, axis.args=list(cex.axis=l.cex, tcl=tc.l, mgp=c(3,0.3,0))) 
+
+z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+
+dev.off()
+
+###############################################################
+# and one-year (unsmoothed) PDO #
+###############################################################
+
+# first GOA sockeye
+winter.sockeye.65.88 <- winter.sockeye.89.13 <- winter.sockeye.14.19 <- NA
+
+for(j in 1:ncol(win.SST.1)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.sockeye.65.88[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1963:1986, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 1965:1988]) # 2-yr lag!
+  
+  winter.sockeye.89.13[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1987:2011, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 1989:2013])
+  
+  winter.sockeye.14.19[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 2012:2017, j], 
+        raw.dat$catch[raw.dat$species=="Sockeye" & 
+                        raw.dat$catch.year %in% 2014:2019])
+}
+
+# now coho!
+winter.coho.65.88 <- winter.coho.89.13 <- winter.coho.14.19 <- NA
+
+for(j in 1:ncol(win.SST.1)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.coho.65.88[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1964:1987, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 1965:1988]) # one-year lag
+  
+  winter.coho.89.13[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1988:2012, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 1989:2013])
+  
+  winter.coho.14.19[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 2013:2018, j], 
+        raw.dat$catch[raw.dat$species=="Coho" & 
+                        raw.dat$catch.year %in% 2014:2019])
+}
+
+# now pink!
+# combining odd and even for our purposes...
+winter.pink.65.88 <- winter.pink.89.13 <- winter.pink.14.19 <- NA
+
+for(j in 1:ncol(win.SST.1)){
+  # note that we are using catch year as the nominal year matching the proposed eras
+  # j <- 1
+  winter.pink.65.88[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1964:1987, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1965:1988]) # 1-yr lag
+  
+  winter.pink.89.13[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 1988:2012, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 1989:2013])
+  
+  winter.pink.14.19[j] <- 
+    cor(win.SST.1[rownames(win.SST.1) %in% 2013:2018, j], 
+        pink.combined$catch[pink.combined$catch.year %in% 2014:2019])
+}
+
+
+png("figs/correlations with 1-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
+
+par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
+
+new.col <- oceColorsPalette(64)
+
+lim <- c(-1,1)
+# first, sockeye
+z <- t(matrix(winter.sockeye.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+# map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
+mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.88)
+mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-1)
+
+z <- t(matrix(winter.sockeye.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-1)
+
+z <- t(matrix(winter.sockeye.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-1)
+
+# now pink
+par(mar=c(0.5,0.5,0.5,0.5))
+
+z <- t(matrix(winter.pink.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5)
+
+z <- t(matrix(winter.pink.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+z <- t(matrix(winter.pink.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+# coho
+par(mar=c(1.5,0.5,0,0.5))
+z <- t(matrix(winter.coho.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+mtext("Coho", outer=T, cex=1.2, side=2, adj=0.15)
+
+z <- t(matrix(winter.coho.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+# add legend strip
+mt.cex <- 1.1
+l.mar <- 3
+l.cex <- 1
+l.l <- 1.2
+tc.l <- -0.2
+
+z[1,1] <- -1; z[66,26] <- 1
+image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r", 
+           smallplot = c(0,1,0.03,0.08), 
+           legend.cex=1, col=new.col,
+           legend.mar=l.mar, legend.line=l.l, axis.args=list(cex.axis=l.cex, tcl=tc.l, mgp=c(3,0.3,0))) 
+
+z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
+    fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+
+dev.off()
+
+#############
+# everything below is old
+
+
 
 library(oce)
 
