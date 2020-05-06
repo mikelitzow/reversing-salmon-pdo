@@ -1,228 +1,128 @@
-# being a script to estimate 2019 values of the PDO
-# via PCA on ERSSTa values, until such a time as the official index values have been posted
-library(ncdf4)
-library(maps)
-library(mapdata)
-library(chron)
-library(fields)
-library(FactoMineR)
-library(oce)
+library(zoo)
+library(tidyverse)
+
+# set theme for ggplot
+theme_set(theme_bw())
+
 
 # PDO isn't currently being updated on JISAO website - 
-# estimate missing values from ERSSTv5
+# download from NCDC
 
-download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-2-01)][(0.0):1:(0.0)][(20):1:(66)][(132):1:(250)]", "data/ersst")
+download.file("https://www.ncdc.noaa.gov/teleconnections/pdo/data.csv", "data/latest.pdo.csv")
 
-# load and process SST data
-nc <- nc_open("data/ersst")
+temp <- read.csv("data/latest.pdo.csv")
 
-ncvar_get(nc, "time")   # seconds since 1-1-1970
-raw <- ncvar_get(nc, "time")
-h <- raw/(24*60*60)
-sst.d <- dates(h, origin = c(1,1,1970))
+year <- floor(as.numeric(rownames(temp))/100)
+month <- as.numeric(rownames(temp)) - year*100
+pdo <- as.numeric(as.character(temp[,1]))
 
-sst.x <- ncvar_get(nc, "longitude")
-sst.y <- ncvar_get(nc, "latitude")
+pdo <- data.frame(year=year[2:length(year)],
+                  month=month[2:length(month)],
+                  pdo=pdo[2:length(pdo)])
 
-SST <- ncvar_get(nc,  "sst")
-# Change data from a 3-D array to a matrix of monthly data by grid point:
-# First, reverse order of dimensions ("transpose" array)
-SST <- aperm(SST, 3:1)  
+# and get a winter (NDJFM) value!
+pdo$winter.year = ifelse(pdo$month %in% 11:12, pdo$year+1, pdo$year)
 
-# Change to matrix with column for each grid point, rows for monthly means
-SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
+winter.pdo <- pdo %>%
+  filter(month %in% c(11,12,1:3)) %>%
+  group_by(winter.year) %>%
+  summarise(winter.pdo=mean(pdo))
+names(winter.pdo) <- c("Year", "NCDC.PDO1")
 
-# Keep track of corresponding latitudes and longitudes of each column:
-sst.lat <- rep(sst.y, length(sst.x))   
-sst.lon <- rep(sst.x, each = length(sst.y))   
-dimnames(SST) <- list(as.character(sst.d), paste("N", sst.lat, "E", sst.lon, sep=""))
+# load salmon catch data
+dat <- read.csv("data/salmon.and.covariate.data.csv")
 
-# limit to Jan 1900 - Dec 1993 and later
-yr <- years(sst.d)
-SST <- SST[yr %in% 1900:1993,]
 
-# plot to check
-SST.mean <- colMeans(SST)
-z <- t(matrix(SST.mean,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-image(sst.x,sst.y,z, col=tim.colors(64))
-contour(sst.x, sst.y, z, add=T) 
-map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
+# add NCDC version of PDO!
+dat <- left_join(dat, winter.pdo)
 
-# drop NAs and compute anomalies
-land <- is.na(SST.mean) 
+# compare the new NCDC version of PDO with the version we were using before...
+check.dat <- dat %>%
+  select(Year, PDO1, NCDC.PDO1) %>%
+  pivot_longer(cols=-Year)
 
-X <- SST[,!land] 
+ggplot(check.dat, aes(Year, value, color=name)) +
+  geom_line()
 
-m <- months(rownames(SST))  # Extracts months from the date vector
-m  # Result is a factor
-f <- function(x) tapply(x, m, mean)  # function to compute monthly means for a single time series
-mu <- apply(X, 2, f)	# Compute monthly means for each time series (location)
-mu
-mu <- mu[rep(1:12, nrow(SST)/12),]  # Replicate means matrix for each year at each location (112 times)
-# (i.e. "stack" monthly means on top of each other 112 times!)
-X.anom <- X - mu 
+# generally close - not such extreme positive values in NCDC version in recent years
 
-# detrend and fit weigted EOF
-y <- 1:nrow(X.anom)
-ff <- function(x) resid(lm(x ~ y))
-X.anom.detr <- apply(X.anom, 2, ff)
+ggplot(dat, aes(PDO1, NCDC.PDO1)) +
+  geom_point()
 
-# get a vector of weights (square root of the cosine of latitude)
-lat.weights <- sst.lat[!land]
-weight <- sqrt(cos(lat.weights*pi/180))
+cor(dat$PDO1, dat$NCDC.PDO1) # 0.932...so better than my estimates!
 
-# EOF by era
-EOF <- svd.triplet(cov(X.anom.detr), col.w=weight) #weighting the columns
+# these catch data are pre-lagged to ocean entry...
+# get smoothed values of NCDC PDO for analysis
 
-# and plot loadings to check
-# get loadings 
-eig.1 <- EOF$U[,1]
+# aligning left - i.e, year of and year after ocean entry
+winter.pdo$NCDC.PDO2 <- rollmean(winter.pdo$NCDC.PDO1, 2, align = "left", fill=NA) 
+winter.pdo$NCDC.PDO3 <- rollmean(winter.pdo$NCDC.PDO1, 3, align = "center", fill=NA) 
 
-# set colors
-new.col <- oceColorsPalette(64)
+dat <- left_join(dat, winter.pdo)
 
-# and plot
-# set the limit for plotting 
-lim <- range(eig.1)
+# now get cross corrs for each species and smoothing for data in each era!
+dat$era <- ifelse(dat$Year <= 1988, "1965-1988",
+                  ifelse(dat$Year %in% 1989:2013, "1989-2013", NA))
 
-z <- rep(NA, ncol(X.anom))
-z[!land] <- eig.1
-z <- t(matrix(z, length(sst.y))) 
-
-image(sst.x,sst.y,z, col=new.col, zlim=c(-lim[2], lim[2]), xlab = "", ylab = "", yaxt="n", xaxt="n")
-
-contour(sst.x, sst.y, z, add=T, drawlabels = F, lwd=0.7, col="grey") 
-map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'China', 'North Korea'), 
-    fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col="darkgoldenrod3")
-map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
-# looks reasonable!
-
-# plot pc1 to check
-
-pc1 <- X.anom.detr %*% EOF$U[,1]
-pc1 <- as.vector(scale(pc1))  # Scale to unit variance (to compare to "true PDO")
-
-pc1 <- -pc1  # Reverse sign of PC 1 to match "true PDO" 
-
-xx <- seq(1900+0.5/12, 1993+11.5/12, length=94*12)  # for plotting (decimal year)
-plot(xx, pc1, type="l")
-abline(v=1977, lty=2)
-
-# load real PDO
-download.file("http://jisao.washington.edu/pdo/PDO.latest", "data/pdo") # uncomment to load
-names <- read.table("data/pdo", skip=30, nrows=1, as.is = T)
-pdo <- read.table("data/pdo", skip=31, nrows=119, fill=T, col.names = names)
-pdo$YEAR <- 1900:(1899+nrow(pdo)) # drop asterisks!
-pdo <- pdo %>%
-  tidyr::gather(month, value, -YEAR) %>% # not loading tidyr because I think it conflicts with maps!
-  dplyr::arrange(YEAR)
-
-plot(pdo$value[pdo$YEAR %in% 1900:1993], pc1)
-
-cor(pdo$value[pdo$YEAR %in% 1900:1993], pc1) # only 0.808!! # try with svd on correlation matrix
-# now get the 1900-2019 values to calculate the full time series of the estimated PDO!
-
-# reload and re-process
-nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
-
-ncvar_get(nc, "time")   # seconds since 1-1-1970
-raw <- ncvar_get(nc, "time")
-h <- raw/(24*60*60)
-sst.d <- dates(h, origin = c(1,1,1970))
-
-sst.x <- ncvar_get(nc, "longitude")
-sst.y <- ncvar_get(nc, "latitude")
-
-SST <- ncvar_get(nc,  "sst")
-# Change data from a 3-D array to a matrix of monthly data by grid point:
-# First, reverse order of dimensions ("transpose" array)
-SST <- aperm(SST, 3:1)  
-
-# Change to matrix with column for each grid point, rows for monthly means
-SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
-
-# Keep track of corresponding latitudes and longitudes of each column:
-sst.lat <- rep(sst.y, length(sst.x))   
-sst.lon <- rep(sst.x, each = length(sst.y))   
-dimnames(SST) <- list(as.character(sst.d), paste("N", sst.lat, "E", sst.lon, sep=""))
-
-# Limit to 20-66 deg. N, 132-250 deg. E:
-drop <- sst.lat > 66
-SST[,drop] <- NA
-
-drop <- sst.lon < 132
-SST[,drop] <- NA
-
-# limit to Jan 1900 - latest
-sst.d[c(553,length(sst.d))]
-
-SST <- SST[553:nrow(SST),]
-
-# plot to check
-SST.mean <- colMeans(SST)
-z <- t(matrix(SST.mean,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-image(sst.x,sst.y,z, col=tim.colors(64))
-contour(sst.x, sst.y, z, add=T) 
-map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
-
-# drop NAs and compute anomalies
-land <- is.na(SST.mean) 
-
-X <- SST[,!land] 
-
-m <- months(rownames(SST))  # Extracts months from the date vector
-m  # Result is a factor
-f <- function(x) tapply(x, m, mean)  # function to compute monthly means for a single time series
-mu <- apply(X, 2, f)	# Compute monthly means for each time series (location)
-mu
-mu <- mu[rep(1:12, nrow(SST)/12),]  
-
-xtra <- 12*((nrow(SST)/12)-floor(nrow(SST)/12))
-
-mu <- rbind(mu, mu[1:xtra,])
-
-X.anom <- X - mu 
-
-# now detrend each cell
-
-X.anom.detrended <- X.anom
-xx <- 1:nrow(X.anom)
-
-for(j in 1:ncol(X.anom)){
+dat <- filter(dat) %>%
+  filter(!is.na(era))
   
-  mod <- lm(X.anom[,j] ~ xx)
-  
-  X.anom.detrended[,j] <- residuals(mod)
-  
+# lump pinks - short time series
+dat$species.grouped <- ifelse(dat$species %in% c("Pink-even", "Pink-odd"), "Pink",
+                              as.character(dat$species))
+spp <- as.factor(unique(dat$species.grouped))
+eras <- as.factor(na.omit(unique(dat$era)))
+
+dat$era <- as.factor(dat$era)
+
+cross.corr <- data.frame()
+
+for(s in spp){ # select spp.
+  for(e in eras){
+    
+    # s <- spp[1]
+    # e <- eras[1]
+    
+    temp <- dat %>%
+      filter(species.grouped==s, era==e) %>%
+      na.omit()
+    
+    cross.corr <- rbind(cross.corr,
+                        data.frame(spp=s,
+                                   era=e,
+                                   lag=-4:4,
+                                   PDO1=ccf(temp$NCDC.PDO1, temp$catch, lag.max=4)$acf,
+                                   PDO2=ccf(temp$NCDC.PDO2, temp$catch, lag.max=4)$acf,
+                                   PDO3=ccf(temp$NCDC.PDO3, temp$catch, lag.max=4)$acf))
+    
+  }
 }
 
-# now project!
+cross.corr$lag <- as.factor(cross.corr$lag)
 
-new.pc1 <- X.anom.detrended %*% SST.pca$u[,1]
-new.pc1 <- as.vector(scale(new.pc1))
-plot(1:length(new.pc1), new.pc1, type="l")
+cross.corr <- cross.corr %>%
+  pivot_longer(cols = c(-spp, -era, -lag))
 
-year <- as.numeric(as.character(years(rownames(SST))))
-year[1:360] <- year[1:360]-100
+# set colors
+cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-new.pdo <- data.frame(year=year,
-                      month=months(rownames(SST)), 
-                      est.PDO = -new.pc1)
+ggplot(cross.corr, aes(lag, value, fill=name)) +
+  geom_bar(stat="identity", position="dodge") +
+  scale_fill_manual(values=cb[2:4], 
+                    labels=c("Winter PDO: year of ocean entry", 
+                             "Winter PDO: year of and year after ocean entry", 
+                             "Winter PDO: year before, year of, and year after")) +
+  facet_grid(spp~era) +
+  geom_hline(yintercept = 0, col="dark grey") +
+  ylab("Pearson correlation") +
+  xlab("Lag (years)") +
+  theme(legend.position = "top", legend.direction="vertical", legend.title = element_blank())
 
-# load real PDO
-names <- read.table("/Users/MikeLitzow 1/Documents/R/FATE2/non-som/~pdo", skip=30, nrows=1, as.is = T)
-pdo <- read.table("/Users/MikeLitzow 1/Documents/R/FATE2/non-som/~pdo", skip=31, nrows=119, fill=T, col.names = names)
-pdo$YEAR <- 1900:(1899+nrow(pdo)) # drop asterisks!
-pdo <- pdo %>%
-  gather(month, value, -YEAR) %>%
-  arrange(YEAR)
+ggsave("figs/PDO-catch correlations at different lags.png", width=5, height = 7, units='in')
 
-new.pdo$real.pdo <- c(pdo$value, rep(NA,7))
+#############
+# now, save as a new data file for use in the stan models!
+dat <- dat %>%
+  select(Year, NCDC.PDO1, NCDC.PDO2, NCDC.PDO3, species, catch)
 
-plot(new.pdo$est.PDO[new.pdo$year > 1993], new.pdo$real.pdo[new.pdo$year > 1993])
-# that'll do!
-mod <- lm(real.pdo ~ est.PDO, data=new.pdo[new.pdo$year > 1993,], na.action="na.exclude")
-
-new.pdo$real.pdo[1426:1435] <- coef(mod)[1] + new.pdo$est.PDO[1426:1435]*coef(mod)[2]
-
-write.csv(new.pdo, "estimated PDO through May 2019.csv")
+names(dat)[2:4] <- c("PDO1", "PDO2", "PDO3")      
