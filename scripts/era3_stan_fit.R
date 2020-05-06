@@ -10,8 +10,13 @@ library(overlapping)
 # NOTE THAT THESE YEARS ARE ALREADY LAGGED TO ENTRY YEAR
 # raw.dat <- read.csv("salmon.and.covariate.data.csv")
 raw.dat <- read.csv("data/salmon.and.NCDC.PDO.csv")
-raw.dat[["era"]] <- ifelse(raw.dat$Year <= 1986, "era1",
-                           ifelse(raw.dat$Year %in% 1987:2011, "era2", "era3"))
+
+# re-lagging to catch year to make this consistent across spp. -
+# we will use catch year to distinguish among eras...
+raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat$Year+1)
+
+raw.dat[["era"]] <- ifelse(raw.dat$catch.year <= 1988, "era1",
+                           ifelse(raw.dat$catch.year %in% 1989:2013, "era2", "era3"))
 
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
         "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -193,9 +198,9 @@ dat3_stan <- list(y = dat3$catch,
                   y_end = end,
                   n_species = length(unique(dat3$species)),
                   N = nrow(dat3),
-                  era1 = ifelse(dat3$Year <= 1986, 1, 0),
-                  era2 = ifelse(dat3$Year %in% 1987:2011, 1, 0),
-                  era3 = ifelse(dat3$Year >= 2012, 1, 0))
+                  era1 = ifelse(dat3$catch.year <= 1988, 1, 0),
+                  era2 = ifelse(dat3$catch.year %in% 1989:2013, 1, 0),
+                  era3 = ifelse(dat3$catch.year >= 2014, 1, 0))
 
 
 
