@@ -126,3 +126,5 @@ dat <- dat %>%
   select(Year, NCDC.PDO1, NCDC.PDO2, NCDC.PDO3, species, catch)
 
 names(dat)[2:4] <- c("PDO1", "PDO2", "PDO3")      
+
+write.csv(dat, "data/salmon.and.NCDC.PDO.csv", row.names = F)
