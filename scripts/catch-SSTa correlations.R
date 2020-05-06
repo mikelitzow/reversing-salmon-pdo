@@ -707,15 +707,15 @@ dev.off()
 #############
 # everything below is old
 
-
-
-library(oce)
-
-col <- oceColorsPalette(64)
-
-z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-imagep(sst.x,sst.y,z, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
-
-image(sst.x,sst.y,z, col=col, 
-      zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
-
+# 
+# 
+# library(oce)
+# 
+# col <- oceColorsPalette(64)
+# 
+# z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+# imagep(sst.x,sst.y,z, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+# 
+# image(sst.x,sst.y,z, col=col, 
+#       zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
+# 
