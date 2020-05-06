@@ -64,9 +64,7 @@ dat <- left_join(dat, winter.pdo)
 dat$era <- ifelse(dat$Year <= 1988, "1965-1988",
                   ifelse(dat$Year %in% 1989:2013, "1989-2013", NA))
 
-dat <- filter(dat) %>%
-  filter(!is.na(era))
-  
+
 # lump pinks - short time series
 dat$species.grouped <- ifelse(dat$species %in% c("Pink-even", "Pink-odd"), "Pink",
                               as.character(dat$species))

@@ -8,173 +8,174 @@ library(bayesplot)
 library(overlapping)
 
 # NOTE THAT THESE YEARS ARE ALREADY LAGGED TO ENTRY YEAR
-raw.dat <- read.csv("salmon.and.covariate.data.csv")
+# raw.dat <- read.csv("salmon.and.covariate.data.csv")
+raw.dat <- read.csv("data/salmon.and.NCDC.PDO.csv")
 raw.dat[["era"]] <- ifelse(raw.dat$Year <= 1986, "era1",
-                    ifelse(raw.dat$Year %in% 1987:2011, "era2", "era3"))
+                           ifelse(raw.dat$Year %in% 1987:2011, "era2", "era3"))
 
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
         "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-# make a plot for AMSS talk
-
-plot.dat <- raw.dat %>%
-  select(Year, catch)  %>%
-  filter(Year <= 2013) %>%
-  group_by(Year) %>%
-  summarise(mean.catch=mean(catch, na.rm=T))
-
-plot.dat$PDO <- raw.dat$PDO3[match(plot.dat$Year, raw.dat$Year)]
-
-plot.dat$era <- ifelse(plot.dat$Year < 1988, "1963-1988", "1989-2013")
-
-ggplot(plot.dat, aes(PDO, mean.catch, color=era)) +
-  theme_bw() +
-  geom_point() +
-  geom_smooth(method="lm", se=F) +
-  theme(legend.title = element_blank(), legend.position = c(0.78, 0.2),
-        axis.text.y = element_blank()) +
-  scale_color_manual(values=cb[c(2,3)]) +
-  xlab("PDO") +
-  ylab("Catch")
-
-ggsave("AMSS two-era catch vs PDO.png", width=3, height=2.5, units='in')
-
-# now an SST version!
-plot.dat$SST <- (9/5)*raw.dat$SST3[match(plot.dat$Year, raw.dat$Year)]+32
-
-
-ggplot(filter(plot.dat, Year %in% 1963:1988), aes(SST, mean.catch)) +
-  theme_bw() +
-  geom_point(color=cb[2]) +
-  geom_smooth(method="lm", se=F, color=cb[2]) +
-  theme(legend.title = element_blank(), legend.position = 'none') +
-  xlab("Winter temperature (ºF)") +
-  ylab("Catch anomaly")
-
-ggsave("one-era catch vs SST.png", width=3.5, height=2.5, units='in')
-
-
-ggplot(plot.dat, aes(SST, mean.catch, color=era)) +
-  theme_bw() +
-  geom_point() +
-  geom_smooth(method="lm", se=F) +
-  theme(legend.title = element_blank(), legend.position = c(0.78, 0.2)) +
-  scale_color_manual(values=cb[c(2,3)]) +
-  xlab("Winter temperature (ºF)") +
-  ylab("Catch anomaly")
-
-ggsave("two-era catch vs SST.png", width=3.5, height=2.5, units='in')
-
-# and dummy tw0-distribution pdf for slope!
-dummy.density <- data.frame(era=rep(c("1963-1988", "1989-2013"), each=5000),
-                            y=c(rnorm(5000, 0.8, 0.1), rnorm(5000, 0.05, 0.15)))
-
-ggplot(dummy.density, aes(y, fill=era)) +
-  theme_bw() +
-  geom_density(alpha=0.6, color="dark grey") +
-  scale_fill_manual(values=cb[c(2,3)]) +
-  xlim(-0.7,2) +
-  geom_vline(xintercept = 0, lty=2) +
-  ylab("Probability density") +
-  xlab("Slope") +
-  theme(legend.position = c(0.8, 0.8), legend.title = element_blank())
-
-
-ggsave("slope dummy two era plot.png", width=3, height=2.5, units="in")
-
-
-names(plot.dat)[2:3] <- c("GOA salmon catch", "Winter PDO (3-year running mean)")
-
-plot.dat <- plot.dat %>%
-  gather(key, value, -era, -Year)
-
-plot.dat$color <- as.factor(ifelse(plot.dat$value < 0, 1, 2))
-plot.dat$order <- ifelse(plot.dat$key=="Winter PDO (3-year running mean)", 1, 2)
-plot.dat$key <- reorder(plot.dat$key, plot.dat$order)
-
-ggplot(plot.dat, aes(Year, value, fill=color)) +
-  theme_bw() +
-  geom_bar(position="dodge", stat="identity") +
-  facet_wrap(~key, scales="free", nrow=2) +
-  theme(legend.position = 'none', axis.title.x = element_blank()) +
-  scale_fill_manual(values=c("blue", "red")) +
-  ylab("Anomaly") +
-  geom_hline(yintercept = 0, color="dark grey") +
-  geom_vline(xintercept = 1988.5, lty=2)
-
-ggsave("pdo and goa catch barplot.png", width=3.5, height=4, units="in")
-
-# now a dummy example plot
-# load pdo
-download.file("http://jisao.washington.edu/pdo/PDO.latest", "~pdo")
-names <- read.table("~pdo", skip=30, nrows=1, as.is = T)
-pdo <- read.table("~pdo", skip=31, nrows=119, fill=T, col.names = names)
-pdo$YEAR <- 1900:(1899+nrow(pdo)) # drop asterisks!
-pdo <- pdo %>%
-  gather(month, value, -YEAR) %>%
-  arrange(YEAR)
-
-pdo <- pdo %>%
-  filter(YEAR %in% 1930:1995)
-
-pdo3 <- zoo::rollmean(tapply(pdo$value, pdo$YEAR, mean), 3, fill=NA)
-error <- rnorm(length(pdo3), 0, 1)
-y <- pdo3 + error
-
-dummy.plot <- data.frame(year=1930:1995,
-                         pdo=pdo3,
-                         y <- scale(y))
-
-names(dummy.plot)[2:3] <- c("PDO (3-year running mean)", "Generic biological response")
-
-dummy.plot <- dummy.plot %>%
-  gather(key, value, -year)
-
-dummy.plot$color <- as.factor(ifelse(dummy.plot$value < 0, 1, 2))
-dummy.plot$order <- ifelse(dummy.plot$key=="PDO (3-year running mean)", 1, 2)
-dummy.plot$key <- reorder(dummy.plot$key, dummy.plot$order)
-
-ggplot(dummy.plot, aes(year, value, fill=color)) +
-  theme_bw() +
-  geom_bar(position="dodge", stat="identity") +
-  facet_wrap(~key, scales="free", nrow=2) +
-  theme(legend.position = 'none', axis.title.x = element_blank()) +
-  scale_fill_manual(values=c("blue", "red")) +
-  ylab("Anomaly") +
-  geom_hline(yintercept = 0, color="dark grey")
-
-ggsave("pdo and biology dummy barplot.png", width=3.5, height=4, units="in")
-
-dummy.plot2 <- data.frame(pdo=pdo3, y=y)
-
-ggplot(dummy.plot2, aes(pdo, y)) +
-  theme_bw() +
-  geom_point(color=cb[2]) +
-  geom_smooth(method="lm", se=F, color=cb[2]) +
-  ylab("Biological response") +
-  xlab("PDO")
-
-ggsave("pdo and biology dummy scatter plot.png", width=3, height=2.5, units="in")
-
-
-# and dummy pdf for slope!
-dummy.density <- data.frame(y=rnorm(5000, 1, 0.2))
-
-ggplot(dummy.density, aes(y)) +
-  theme_bw() +
-  geom_density(fill=cb[2], alpha=0.6, color="dark grey") +
-  xlim(-0.5,1.8) +
-  geom_vline(xintercept = 0, lty=2) +
-  ylab("Probability density") +
-  xlab("Slope")
-
-ggsave("slope dummy plot.png", width=3, height=2.5, units="in")
+# # make a plot for AMSS talk
+# 
+# plot.dat <- raw.dat %>%
+#   select(Year, catch)  %>%
+#   filter(Year <= 2013) %>%
+#   group_by(Year) %>%
+#   summarise(mean.catch=mean(catch, na.rm=T))
+# 
+# plot.dat$PDO <- raw.dat$PDO3[match(plot.dat$Year, raw.dat$Year)]
+# 
+# plot.dat$era <- ifelse(plot.dat$Year < 1988, "1963-1988", "1989-2013")
+# 
+# ggplot(plot.dat, aes(PDO, mean.catch, color=era)) +
+#   theme_bw() +
+#   geom_point() +
+#   geom_smooth(method="lm", se=F) +
+#   theme(legend.title = element_blank(), legend.position = c(0.78, 0.2),
+#         axis.text.y = element_blank()) +
+#   scale_color_manual(values=cb[c(2,3)]) +
+#   xlab("PDO") +
+#   ylab("Catch")
+# 
+# ggsave("AMSS two-era catch vs PDO.png", width=3, height=2.5, units='in')
+# 
+# # now an SST version!
+# plot.dat$SST <- (9/5)*raw.dat$SST3[match(plot.dat$Year, raw.dat$Year)]+32
+# 
+# 
+# ggplot(filter(plot.dat, Year %in% 1963:1988), aes(SST, mean.catch)) +
+#   theme_bw() +
+#   geom_point(color=cb[2]) +
+#   geom_smooth(method="lm", se=F, color=cb[2]) +
+#   theme(legend.title = element_blank(), legend.position = 'none') +
+#   xlab("Winter temperature (ºF)") +
+#   ylab("Catch anomaly")
+# 
+# ggsave("one-era catch vs SST.png", width=3.5, height=2.5, units='in')
+# 
+# 
+# ggplot(plot.dat, aes(SST, mean.catch, color=era)) +
+#   theme_bw() +
+#   geom_point() +
+#   geom_smooth(method="lm", se=F) +
+#   theme(legend.title = element_blank(), legend.position = c(0.78, 0.2)) +
+#   scale_color_manual(values=cb[c(2,3)]) +
+#   xlab("Winter temperature (ºF)") +
+#   ylab("Catch anomaly")
+# 
+# ggsave("two-era catch vs SST.png", width=3.5, height=2.5, units='in')
+# 
+# # and dummy tw0-distribution pdf for slope!
+# dummy.density <- data.frame(era=rep(c("1963-1988", "1989-2013"), each=5000),
+#                             y=c(rnorm(5000, 0.8, 0.1), rnorm(5000, 0.05, 0.15)))
+# 
+# ggplot(dummy.density, aes(y, fill=era)) +
+#   theme_bw() +
+#   geom_density(alpha=0.6, color="dark grey") +
+#   scale_fill_manual(values=cb[c(2,3)]) +
+#   xlim(-0.7,2) +
+#   geom_vline(xintercept = 0, lty=2) +
+#   ylab("Probability density") +
+#   xlab("Slope") +
+#   theme(legend.position = c(0.8, 0.8), legend.title = element_blank())
+# 
+# 
+# ggsave("slope dummy two era plot.png", width=3, height=2.5, units="in")
+# 
+# 
+# names(plot.dat)[2:3] <- c("GOA salmon catch", "Winter PDO (3-year running mean)")
+# 
+# plot.dat <- plot.dat %>%
+#   gather(key, value, -era, -Year)
+# 
+# plot.dat$color <- as.factor(ifelse(plot.dat$value < 0, 1, 2))
+# plot.dat$order <- ifelse(plot.dat$key=="Winter PDO (3-year running mean)", 1, 2)
+# plot.dat$key <- reorder(plot.dat$key, plot.dat$order)
+# 
+# ggplot(plot.dat, aes(Year, value, fill=color)) +
+#   theme_bw() +
+#   geom_bar(position="dodge", stat="identity") +
+#   facet_wrap(~key, scales="free", nrow=2) +
+#   theme(legend.position = 'none', axis.title.x = element_blank()) +
+#   scale_fill_manual(values=c("blue", "red")) +
+#   ylab("Anomaly") +
+#   geom_hline(yintercept = 0, color="dark grey") +
+#   geom_vline(xintercept = 1988.5, lty=2)
+# 
+# ggsave("pdo and goa catch barplot.png", width=3.5, height=4, units="in")
+# 
+# # now a dummy example plot
+# # load pdo
+# download.file("http://jisao.washington.edu/pdo/PDO.latest", "~pdo")
+# names <- read.table("~pdo", skip=30, nrows=1, as.is = T)
+# pdo <- read.table("~pdo", skip=31, nrows=119, fill=T, col.names = names)
+# pdo$YEAR <- 1900:(1899+nrow(pdo)) # drop asterisks!
+# pdo <- pdo %>%
+#   gather(month, value, -YEAR) %>%
+#   arrange(YEAR)
+# 
+# pdo <- pdo %>%
+#   filter(YEAR %in% 1930:1995)
+# 
+# pdo3 <- zoo::rollmean(tapply(pdo$value, pdo$YEAR, mean), 3, fill=NA)
+# error <- rnorm(length(pdo3), 0, 1)
+# y <- pdo3 + error
+# 
+# dummy.plot <- data.frame(year=1930:1995,
+#                          pdo=pdo3,
+#                          y <- scale(y))
+# 
+# names(dummy.plot)[2:3] <- c("PDO (3-year running mean)", "Generic biological response")
+# 
+# dummy.plot <- dummy.plot %>%
+#   gather(key, value, -year)
+# 
+# dummy.plot$color <- as.factor(ifelse(dummy.plot$value < 0, 1, 2))
+# dummy.plot$order <- ifelse(dummy.plot$key=="PDO (3-year running mean)", 1, 2)
+# dummy.plot$key <- reorder(dummy.plot$key, dummy.plot$order)
+# 
+# ggplot(dummy.plot, aes(year, value, fill=color)) +
+#   theme_bw() +
+#   geom_bar(position="dodge", stat="identity") +
+#   facet_wrap(~key, scales="free", nrow=2) +
+#   theme(legend.position = 'none', axis.title.x = element_blank()) +
+#   scale_fill_manual(values=c("blue", "red")) +
+#   ylab("Anomaly") +
+#   geom_hline(yintercept = 0, color="dark grey")
+# 
+# ggsave("pdo and biology dummy barplot.png", width=3.5, height=4, units="in")
+# 
+# dummy.plot2 <- data.frame(pdo=pdo3, y=y)
+# 
+# ggplot(dummy.plot2, aes(pdo, y)) +
+#   theme_bw() +
+#   geom_point(color=cb[2]) +
+#   geom_smooth(method="lm", se=F, color=cb[2]) +
+#   ylab("Biological response") +
+#   xlab("PDO")
+# 
+# ggsave("pdo and biology dummy scatter plot.png", width=3, height=2.5, units="in")
+# 
+# 
+# # and dummy pdf for slope!
+# dummy.density <- data.frame(y=rnorm(5000, 1, 0.2))
+# 
+# ggplot(dummy.density, aes(y)) +
+#   theme_bw() +
+#   geom_density(fill=cb[2], alpha=0.6, color="dark grey") +
+#   xlim(-0.5,1.8) +
+#   geom_vline(xintercept = 0, lty=2) +
+#   ylab("Probability density") +
+#   xlab("Slope")
+# 
+# ggsave("slope dummy plot.png", width=3, height=2.5, units="in")
 
 ## Prep data -----------------------------------------------
 dat3 <- na.omit(raw.dat)
 dat3 <- plyr::ddply(dat3, .(species), transform, pdo = scale(PDO3))
 
-dat3 <- plyr::ddply(dat3, .(species), transform, sst = (9/5)*SST3+32) # changing to raw ºF!
+# dat3 <- plyr::ddply(dat3, .(species), transform, sst = (9/5)*SST3+32) # changing to raw ºF!
 
 dat3$era <- as.factor(dat3$era)
 
@@ -200,27 +201,27 @@ dat3_stan <- list(y = dat3$catch,
 
 ## Plot data -----------------------------------------------
 
-## Catch (color) + SST (black)
-g <- ggplot(dat3) +
-    geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
-    geom_line(aes(x = Year, y = catch, color = species)) +
-    geom_line(data = dat3[dat3$species == "Coho", ], aes(x = Year, y = sst),
-              color = "black", size = 1) +
-    theme_bw()
-print(g)
+# ## Catch (color) + SST (black)
+# g <- ggplot(dat3) +
+#   geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
+#   geom_line(aes(x = Year, y = catch, color = species)) +
+#   geom_line(data = dat3[dat3$species == "Coho", ], aes(x = Year, y = sst),
+#             color = "black", size = 1) +
+#   theme_bw()
+# print(g)
 
 
 ## Catch distribution
 g <- ggplot(dat3) +
-    aes(x = species, y = catch) +
-    geom_boxplot() +
-    theme_bw()
+  aes(x = species, y = catch) +
+  geom_boxplot() +
+  theme_bw()
 print(g)
 
 
 dat3$plot.order <- ifelse(dat3$species=="Pink-odd", 1,
-                              ifelse(dat3$species=="Pink-even", 2,
-                                     ifelse(dat3$species=="Sockeye", 3, 4)))
+                          ifelse(dat3$species=="Pink-even", 2,
+                                 ifelse(dat3$species=="Sockeye", 3, 4)))
 
 dat3$species <- reorder(dat3$species, dat3$plot.order)
 
@@ -234,13 +235,13 @@ dat3$era.labs <- factor(dat3$era, labels = c("1965-1988", "1989-2013", "2014-201
 ## Catch vs. PDO
 ## This suggests to me that we could pool all species
 scatter <- ggplot(dat3) +
-    aes(x = pdo, y = catch, color = species) +
-    geom_point() +
-    geom_smooth(method = "lm", se = FALSE) +
-    facet_wrap( ~era.labs) +
-    scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
-    theme_bw() + ylab("Catch anomaly") + xlab("PDO (Nov-Mar, 3-yr running mean)") +
-    theme(legend.title = element_blank(), legend.position = 'top')
+  aes(x = pdo, y = catch, color = species) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap( ~era.labs) +
+  scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
+  theme_bw() + ylab("Catch anomaly") + xlab("PDO (Nov-Mar, 3-yr running mean)") +
+  theme(legend.title = element_blank(), legend.position = 'top')
 
 print(scatter)
 
@@ -470,21 +471,21 @@ acf(resids$Residual)
 
 ## 3 era: hierarchical --> model for manuscript ----------------
 era3_hier_arm <- stan_glmer(catch ~ era + pdo + pdo:era + (era + pdo + pdo:era | species),
-                    data = dat3,
-                    chains = 4, cores = 4, thin = 1,
-                    warmup = 1000, iter = 4000, refresh = 0,
-                    adapt_delta = 0.99,
-                    prior = normal(location = 0, scale = 5, autoscale = FALSE),
-                    prior_intercept = normal(location = 0, scale = 5, autoscale = FALSE),
-                    prior_aux = student_t(df = 3, location = 0, scale = 5, autoscale = FALSE),
-                    prior_covariance = decov(regularization = 1,
-                                             concentration = 1,
-                                             shape = 1, scale = 1))
+                            data = dat3,
+                            chains = 4, cores = 4, thin = 1,
+                            warmup = 1000, iter = 4000, refresh = 0,
+                            adapt_delta = 0.99,
+                            prior = normal(location = 0, scale = 5, autoscale = FALSE),
+                            prior_intercept = normal(location = 0, scale = 5, autoscale = FALSE),
+                            prior_aux = student_t(df = 3, location = 0, scale = 5, autoscale = FALSE),
+                            prior_covariance = decov(regularization = 1,
+                                                     concentration = 1,
+                                                     shape = 1, scale = 1))
 
 # do predictions for recent era
 newdata = expand.grid("era"=unique(dat3$era),
-  pdo=c(mean(dat3$pdo[which(dat3$era=="era3")]),
-    mean(dat3$pdo[which(dat3$era=="era3")])+1), species=unique(dat3$species)) %>%
+                      pdo=c(mean(dat3$pdo[which(dat3$era=="era3")]),
+                            mean(dat3$pdo[which(dat3$era=="era3")])+1), species=unique(dat3$species)) %>%
   dplyr::filter(era=="era3")
 pred = posterior_predict(era3_hier_arm, newdata=newdata)
 newdata$mean_pred = round(apply(pred,2,mean), 3)
@@ -533,15 +534,15 @@ saveRDS(int_overlap$OV,file="salmon_int_overlap.rds")
 saveRDS(slope_overlap$OV,file="salmon_slope_overlap.rds")
 
 slopes <- ggplot(mbeta, aes(x = value, fill = variable)) +
-    theme_bw() +
-    geom_density(alpha = 0.7) +
-    scale_fill_manual(values = c(cb[2], cb[3], cb[4]),
-                      labels=c("1965-1988", "1989-2013", "2014-2019")) +
-    geom_vline(xintercept = 0, lty = 2) +
-    labs(x = "Slope (scaled anomaly)",
-         y = "Posterior density") +
-    theme(legend.title = element_blank(), legend.position = 'top',
-          legend.direction = "horizontal")
+  theme_bw() +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c(cb[2], cb[3], cb[4]),
+                    labels=c("1965-1988", "1989-2013", "2014-2019")) +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "Slope (scaled anomaly)",
+       y = "Posterior density") +
+  theme(legend.title = element_blank(), legend.position = 'top',
+        legend.direction = "horizontal")
 print(slopes)
 
 
@@ -566,15 +567,15 @@ range(summary(era3_hier_arm[["stanfit"]])[["summary"]][ , "Rhat"])
 
 ## Plot slope and intercepts
 g <- ggplot(mdf_hier, aes(x = value, fill = variable)) +
-    theme_bw() +
-    geom_density(alpha = 0.7, adjust = 1.5) +
-    scale_fill_manual(values = c(cb[2], cb[3], cb[4])) +
-    geom_vline(xintercept = 0, lty = 2) +
-    labs(x = "Coefficient",
-         y = "Posterior density",
-         fill = "Era",
-         title = "Group level means") +
-    facet_wrap( ~ coef)
+  theme_bw() +
+  geom_density(alpha = 0.7, adjust = 1.5) +
+  scale_fill_manual(values = c(cb[2], cb[3], cb[4])) +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "Coefficient",
+       y = "Posterior density",
+       fill = "Era",
+       title = "Group level means") +
+  facet_wrap( ~ coef)
 print(g)
 
 
@@ -589,12 +590,12 @@ coef_mean <- data.frame(era = unique(dat3[["era"]]),
                         slope = coef_tab$mean[coef_tab$coef == "Slope"])
 
 g <- ggplot(dat3) +
-    aes(x = pdo, y = catch, color = species) +
-    geom_point() +
-    geom_abline(data = coef_mean, aes(slope = slope, intercept = intercept)) +
-    facet_wrap( ~ era) +
-    scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
-    theme_bw()
+  aes(x = pdo, y = catch, color = species) +
+  geom_point() +
+  geom_abline(data = coef_mean, aes(slope = slope, intercept = intercept)) +
+  facet_wrap( ~ era) +
+  scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
+  theme_bw()
 print(g)
 
 
@@ -616,11 +617,23 @@ e3 <- data.frame(species = rownames(cf),
 coef_sp <- rbind(e1, e2, e3)
 
 g <- ggplot(dat3) +
-    aes(x = pdo, y = catch, color = species) +
-    geom_point() +
-    geom_abline(data = coef_sp, aes(slope = slope, intercept = intercept, color = species)) +
-    facet_wrap( ~ era) +
-    scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
-    labs(x = "PDO", y = "Catch anomaly", color = "Species") +
-    theme_bw()
+  aes(x = pdo, y = catch, color = species) +
+  geom_point() +
+  geom_abline(data = coef_sp, aes(slope = slope, intercept = intercept, color = species)) +
+  facet_wrap( ~ era) +
+  scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
+  labs(x = "PDO", y = "Catch anomaly", color = "Species") +
+  theme_bw()
 print(g)
+© 2020 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Help
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
