@@ -229,7 +229,7 @@ salmon.covariates$Papa <-
 # need to create synthetic time series combining GODAS and SODA time series!
 
 # first SODA
-nc <- nc_open("/Users/MikeLitzow/Documents/R/NSF-GOA/paper 1 final/submitted/hawaii_3e19_7ccd_16ff_e908_64db_63e9.nc")
+nc <- nc_open("/Users/MikeLitzow 1/Documents/R/NSF-GOA/paper 1 final/submitted/hawaii_3e19_7ccd_16ff_e908_64db_63e9.nc")
 # view dates (middle of month):
 raw <- ncvar_get(nc, "time")
 h <- raw/(24*60*60)
@@ -248,17 +248,26 @@ ssh <- matrix(ssh, nrow=dim(ssh)[1], ncol=prod(dim(ssh)[2:3]))  # Change to matr
 
 dimnames(ssh) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
-# block out evertyhing but the area we want
+# check
+# png("ssh.soda.png", width=6, height = 4, units='in', res=300)
+SSH.mean <- colMeans(ssh)
+z <- t(matrix(SSH.mean,length(y)))  
+image(x,y,z, col=tim.colors(64), xlim=c(180,250), ylim=c(50,64))
+contour(x, y, z, add=T)  
+map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
+# dev.off()
+
+# block out evertyhing but the area we want - first for the coast
 ssh.mean <- colMeans(ssh)
-
+ssh.coast <- ssh
 drop <- ssh.mean < 0.07
-ssh[,drop] <- NA
+ssh.coast[,drop] <- NA
 
-ssh[,lon < 198] <- NA
-ssh[,lat < 55] <- NA
+ssh.coast[,lon < 198] <- NA
+ssh.coast[,lat < 55] <- NA
 
 # check
-SSH.mean <- colMeans(ssh)
+SSH.mean <- colMeans(ssh.coast)
 z <- t(matrix(SSH.mean,length(y)))  
 image(x,y,z, col=tim.colors(64), xlim=c(180,250), ylim=c(50,64))
 contour(x, y, z, add=T)  
@@ -267,10 +276,59 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 m <- months(d)
 yr <- years(d)
 
+ssh.mean.soda <- rowMeans(ssh.coast, na.rm=T)
+
 ssh.soda.fma <- ssh.mean.soda[m %in% c("Feb", "Mar", "Apr")]
 yr.fma <- yr[m %in% c("Feb", "Mar", "Apr")]
-ssh.soda.fma <- tapply(ssh.soda.fma, yr.fma, mean)
+ssh.soda.coast <- tapply(ssh.soda.fma, yr.fma, mean)
 
+# and now get the center??
+ssh.offshore <- ssh
+drop <- ssh.mean > -0.25
+ssh.offshore[,drop] <- NA
+
+ssh.offshore[,lon < 200] <- NA
+ssh.offshore[,lat < 53] <- NA
+
+# check
+SSH.mean <- colMeans(ssh.offshore)
+z <- t(matrix(SSH.mean,length(y)))  
+image(x,y,z, col=tim.colors(64), xlim=c(180,250), ylim=c(50,64))
+contour(x, y, z, add=T)  
+map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
+
+ssh.mean.soda <- rowMeans(ssh.offshore, na.rm=T)
+
+ssh.soda.fma <- ssh.mean.soda[m %in% c("Feb", "Mar", "Apr")]
+yr.fma <- yr[m %in% c("Feb", "Mar", "Apr")]
+ssh.soda.offshore <- tapply(ssh.soda.fma, yr.fma, mean)
+
+diff.soda <- ssh.soda.coast- ssh.soda.offshore
+
+plot <- data.frame(year=1949:2010,
+                   coast=ssh.soda.coast,
+                   offshore=ssh.soda.offshore)
+
+ggplot(plot, aes(coast, offshore)) +
+  theme_bw() +
+  geom_point()
+
+plot <- plot %>%
+  pivot_longer(cols = -year)
+
+ggplot(plot, aes(year, value, color=name)) +
+  theme_bw() +
+  geom_line()
+
+plot <- data.frame(year=1949:2010,
+                   diff=ssh.soda.coast-ssh.soda.offshore)
+
+ggplot(plot, aes(year, diff)) +
+  theme_bw() +
+  geom_line()
+
+
+#######################
 # now GODAS
 nc <- nc_open("/Users/MikeLitzow/Documents/R/climate-data/data/North.Pacific.godas.sshgsfc")
 # view dates (middle of month):
@@ -347,7 +405,6 @@ salmon.covariates$FMA.ssh.SODA <-
 
 salmon.covariates$FMA.ssh.COMBINED <- 
   godas.synthetic.fma[match(salmon.covariates$year, names(godas.synthetic.fma))] 
-
 
 # total GOA FMA wind stress
 # as with SSH, we will make both SODA and GODAS time series
