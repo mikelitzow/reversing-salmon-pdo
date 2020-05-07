@@ -311,6 +311,7 @@ lines(1949:2010, soda$value, type="l", col="red")
 
 soda.predicted.by.godas <- c(soda$value[soda$year %in% 1965:1979], 
                          soda.estimate)
+names(soda.predicted.by.godas) <- 1965:2019
 
 plot(1965:2019, soda.predicted.by.godas, type="l")
 
@@ -326,6 +327,7 @@ lines(1980:2019, godas$value, type="l", col="red")
 
 names(godas.estimate) <- 1949:2010
 godas.predicted.by.soda <- c(godas.estimate[names(godas.estimate) %in% 1965:1979], godas$value)
+names(godas.predicted.by.soda) <- 1965:2019
 
 plot(1965:2019, scale(godas.predicted.by.soda), type="l")
 lines(1965:2019, scale(soda.predicted.by.godas), type="l", col="red")
