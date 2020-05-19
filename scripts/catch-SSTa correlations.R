@@ -143,15 +143,15 @@ raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat
 # load ERSST
 # uncomment these lines to download data
 # identify latest year and month needed
-year <- 2019
-month <- "07"
-
-URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
-
-download.file(URL, "data/North.Pacific.ersst")
+# year <- 2019
+# month <- "07"
+# 
+# URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
+# 
+# download.file(URL, "data/North.Pacific.ersst")
 
 # open netcdf file of SST data
-nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
+# nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
 nc <- nc_open("data/North.Pacific.ersst")
 
 # extract dates
@@ -211,6 +211,9 @@ f2 <- function(x) rollmean(x, 2, align="right", fill=NA)
 win.SST.2 <- apply(win.SST, 2, f2)
 
 win.SST.1 <- win.SST # and the unsmoothed version!
+
+# add rownames to smoothed version
+rownames(win.SST.3) <- row.names(win.SST.2) <- row.names(win.SST.1)
 
 # plot to check
 SST.mean <- colMeans(win.SST.3, na.rm=T)
@@ -296,50 +299,73 @@ for(j in 1:ncol(win.SST.3)){
 }
 
 
-png("figs/correlations with 3-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
+# png("figs/correlations with 3-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
 
-par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
+tiff("figs/fig1.tiff", 6, 6, units="in", res=300)
+
+par(mfrow=c(3,3), mar=c(0,0.5,3,0.5), oma=c(2.5,1.5,2,1.7), mgp=c(3, 0.2, 0))
 
 new.col <- oceColorsPalette(64)
 
 lim <- c(-1,1)
+
 # first, sockeye
 z <- t(matrix(winter.sockeye.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
 # map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
-mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.88)
-mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-1)
+
+mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.85, line=-0.3)
+mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-2.7)
 
 z <- t(matrix(winter.sockeye.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-2.7)
 
 z <- t(matrix(winter.sockeye.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60 N", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
+mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-2.7)
 
 # now pink
-par(mar=c(0.5,0.5,0.5,0.5))
+par(mar=c(1.25,0.5,1.25,0.5))
 
 z <- t(matrix(winter.pink.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5, line=-0.3)
 
 z <- t(matrix(winter.pink.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
@@ -349,27 +375,45 @@ contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
 # coho
-par(mar=c(1.5,0.5,0,0.5))
+par(mar=c(2.5,0.5,0,0.5))
 z <- t(matrix(winter.coho.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Coho", outer=T, cex=1.2, side=2, adj=0.15)
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+mgp=c(3, 0.2, 0)
+axis(4, labels = F, tcl=0.25)
+
+mtext("Coho", outer=T, cex=1.2, side=2, adj=0.17, line=-0.3)
 
 z <- t(matrix(winter.coho.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+axis(4, labels = F, tcl=0.25)
+
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
 # add legend strip
 mt.cex <- 1.1
-l.mar <- 3
+l.mar <- 6
 l.cex <- 1
+l.wd <- 0.5
 l.l <- 1.2
 tc.l <- -0.2
+
 
 z[1,1] <- -1; z[66,26] <- 1
 image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r", 
@@ -377,11 +421,18 @@ image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r",
            legend.cex=1, col=new.col,
            legend.mar=l.mar, legend.line=l.l, axis.args=list(cex.axis=l.cex, tcl=tc.l, mgp=c(3,0.3,0))) 
 
+par(mgp=c(3, 0.2, 0))
+
 z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+par(mgp=c(3, 0.2, 0))
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
 
 
 dev.off()
@@ -457,48 +508,69 @@ for(j in 1:ncol(win.SST.2)){
 
 png("figs/correlations with 2-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
 
-par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
+par(mfrow=c(3,3), mar=c(0,0.5,3,0.5), oma=c(2.5,1.5,2,1.7), mgp=c(3, 0.2, 0))
 
 new.col <- oceColorsPalette(64)
 
 lim <- c(-1,1)
+
 # first, sockeye
 z <- t(matrix(winter.sockeye.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
 # map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
-mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.88)
-mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-1)
+
+mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.85, line=-0.3)
+mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-2.7)
 
 z <- t(matrix(winter.sockeye.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-2.7)
 
 z <- t(matrix(winter.sockeye.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60 N", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
+mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-2.7)
 
 # now pink
-par(mar=c(0.5,0.5,0.5,0.5))
+par(mar=c(1.25,0.5,1.25,0.5))
 
 z <- t(matrix(winter.pink.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5, line=-0.3)
 
 z <- t(matrix(winter.pink.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
@@ -508,27 +580,45 @@ contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
 # coho
-par(mar=c(1.5,0.5,0,0.5))
+par(mar=c(2.5,0.5,0,0.5))
 z <- t(matrix(winter.coho.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Coho", outer=T, cex=1.2, side=2, adj=0.15)
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+mgp=c(3, 0.2, 0)
+axis(4, labels = F, tcl=0.25)
+
+mtext("Coho", outer=T, cex=1.2, side=2, adj=0.17, line=-0.3)
 
 z <- t(matrix(winter.coho.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+axis(4, labels = F, tcl=0.25)
+
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
 # add legend strip
 mt.cex <- 1.1
-l.mar <- 3
+l.mar <- 6
 l.cex <- 1
+l.wd <- 0.5
 l.l <- 1.2
 tc.l <- -0.2
+
 
 z[1,1] <- -1; z[66,26] <- 1
 image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r", 
@@ -536,11 +626,18 @@ image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r",
            legend.cex=1, col=new.col,
            legend.mar=l.mar, legend.line=l.l, axis.args=list(cex.axis=l.cex, tcl=tc.l, mgp=c(3,0.3,0))) 
 
+par(mgp=c(3, 0.2, 0))
+
 z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+par(mgp=c(3, 0.2, 0))
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
 
 
 dev.off()
@@ -616,48 +713,69 @@ for(j in 1:ncol(win.SST.1)){
 
 png("figs/correlations with 1-yr smoothed winter sst sockeye pink coho.png", 6, 6, units="in", res=300)
 
-par(mfrow=c(3,3), mar=c(0,0.5,1.5,0.5), oma=c(2,2,2,0))
+par(mfrow=c(3,3), mar=c(0,0.5,3,0.5), oma=c(2.5,1.5,2,1.7), mgp=c(3, 0.2, 0))
 
 new.col <- oceColorsPalette(64)
 
 lim <- c(-1,1)
+
 # first, sockeye
 z <- t(matrix(winter.sockeye.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
 # map('world2Hires',fill=F, xlim=c(130,250), ylim=c(20,66),add=T, lwd=1)
-mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.88)
-mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-1)
+
+mtext("Sockeye", outer=T, cex=1.2, side=2, adj=0.85, line=-0.3)
+mtext("1965-1988", outer=T, cex=1.2, side=3, adj=0.1, line=-2.7)
 
 z <- t(matrix(winter.sockeye.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("1989-2013", outer=T, cex=1.2, side=3, adj=0.5, line=-2.7)
 
 z <- t(matrix(winter.sockeye.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-1)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60 N", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
+mtext("2014-2019", outer=T, cex=1.2, side=3, adj=0.9, line=-2.7)
 
 # now pink
-par(mar=c(0.5,0.5,0.5,0.5))
+par(mar=c(1.25,0.5,1.25,0.5))
 
 z <- t(matrix(winter.pink.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5)
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
+
+mtext("Pink", outer=T, cex=1.2, side=2, adj=0.5, line=-0.3)
 
 z <- t(matrix(winter.pink.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = F, tcl=0.25, lwd=0.5)
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
@@ -667,27 +785,45 @@ contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
+axis(1, labels = F, tcl=0.25, lwd=0.5)
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
+
 # coho
-par(mar=c(1.5,0.5,0,0.5))
+par(mar=c(2.5,0.5,0,0.5))
 z <- t(matrix(winter.coho.65.88,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
-mtext("Coho", outer=T, cex=1.2, side=2, adj=0.15)
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+mgp=c(3, 0.2, 0)
+axis(4, labels = F, tcl=0.25)
+
+mtext("Coho", outer=T, cex=1.2, side=2, adj=0.17, line=-0.3)
 
 z <- t(matrix(winter.coho.89.13,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
+
+par(mgp=c(3, 0.05, 0))
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+axis(4, labels = F, tcl=0.25)
+
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
 
 # add legend strip
 mt.cex <- 1.1
-l.mar <- 3
+l.mar <- 6
 l.cex <- 1
+l.wd <- 0.5
 l.l <- 1.2
 tc.l <- -0.2
+
 
 z[1,1] <- -1; z[66,26] <- 1
 image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r", 
@@ -695,11 +831,18 @@ image.plot(z, legend.only=TRUE, horizontal =TRUE,  legend.lab = "r",
            legend.cex=1, col=new.col,
            legend.mar=l.mar, legend.line=l.l, axis.args=list(cex.axis=l.cex, tcl=tc.l, mgp=c(3,0.3,0))) 
 
+par(mgp=c(3, 0.2, 0))
+
 z <- t(matrix(winter.coho.14.19,length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image(sst.x,sst.y,z, col=new.col, zlim=lim, ylim=c(20,66), yaxt="n", xaxt="n", xlab="", ylab="")
 contour(sst.x,sst.y,z, add=T, col="grey",vfont=c("sans serif", "bold"))
 map('world2Hires', c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China'), 
     fill=T,add=T, lwd=0.5, col="darkgoldenrod3")
+
+axis(1, labels = c("140 E", "180", "140 W"), at= seq(140,220,40), las=1, tcl=0.25, lwd=0.5)
+
+par(mgp=c(3, 0.2, 0))
+axis(4, labels = c("60", "50", "40", "30"), at= seq(60,30,-10), las=1, tcl=0.25, lwd=0.5)
 
 
 dev.off()
