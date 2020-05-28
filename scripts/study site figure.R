@@ -239,8 +239,8 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 
 
 # make a study site figure
-
-png("figs/study site figure.png", 8,5.5, units="in", res=300)
+tiff("figs/study site figure.tiff", 8,5.5, units="in", res=300)
+# png("figs/study site figure.png", 8,5.5, units="in", res=300)
 par(mfrow=c(2,2), tcl=-0.2, cex.lab=0.8, cex.axis=0.8, mar=c(1,2,1,0.5))
 mt.cex <- 1.1
 l.mar <- 3
