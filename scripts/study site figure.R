@@ -271,18 +271,29 @@ z <- rep(NA, ncol(ssh.godas.fma))
 z[!ssh.land] <- plot.ssh 
 z <- t(matrix(z,length(y)))  
 image.plot(x,y,z, col=new.col,  yaxt="n", xaxt="n", axis.args = list(mgp=c(3,0.5,0)),
-           zlim=zlim, xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
+           xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
 contour(x, y, z, add=T) 
 map('world2Hires', c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col=land.col)
 points(360-145,50, pch=21, bg="#56B4E9", col="black", cex=1.5)
 text(360-145, 50, "Ocean Station Papa ", pos=2, cex=1.2, col="#56B4E9")
-mtext("b) Sea surface height (EOF1) and Ocean Station Papa", adj=0, cex=0.95)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("160 W", "150", "140", "130"), at= seq(200, 230, 10), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.2,0))
+axis(2, labels = c("60 N", "58", "56", "54", "52", "50"), at= seq(60,50,-2), las=1, tcl=0.25, lwd=0.5)
+
+mtext("b) Sea surface height (EOF1) and Station Papa", adj=0, cex=0.95)
 
 z <- t(matrix(colMeans(SST), length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
 image.plot(sst.x,sst.y,z, col=new.col,  yaxt="n", xaxt="n", axis.args = list(mgp=c(3,0.5,0)),
            zlim=c(4,9), xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
 box()
 map('world2Hires', c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col=land.col)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("160 W", "150", "140", "130"), at= seq(200, 230, 10), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.2,0))
+axis(2, labels = c("60 N", "58", "56", "54", "52", "50"), at= seq(60,50,-2), las=1, tcl=0.25, lwd=0.5)
 
 mtext("c) Sea surface temperature (°C)", adj=0, cex=0.95)
 
@@ -306,5 +317,11 @@ lines(npi.x,npi.y, lwd=2, col="#0072B2")
 
 text(130, 24, "Study site", cex=1.2, col="#D55E00", pos=4)
 text(130, 20.5, "North Pacific Index", cex=1.2, col="#0072B2", pos=4)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("140 E", "160", "180", "160 W", "140", "120"), at= seq(140, 240, 20), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.2,0))
+axis(2, labels = c("60 N", "50", "40", "30", "20"), at= seq(60,20,-10), las=1, tcl=0.25, lwd=0.5)
+
 mtext("d) Study site and North Pacific Index", adj=0, cex=0.95)
 dev.off()
