@@ -239,9 +239,9 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 
 
 # make a study site figure
-tiff("figs/study site figure.tiff", 8,5.5, units="in", res=300)
+tiff("figs/study site figure.tiff", 8,3.75, units="in", res=300)
 # png("figs/study site figure.png", 8,5.5, units="in", res=300)
-par(mfrow=c(2,2), tcl=-0.2, cex.lab=0.8, cex.axis=0.8, mar=c(1,2,1,0.5))
+par(mfrow=c(2,2), tcl=-0.2, cex.lab=0.8, cex.axis=0.8, mar=c(1,2,1,0.5), oma=c(0,1,0,1))
 mt.cex <- 1.1
 l.mar <- 3
 l.cex <- 1.3
@@ -315,7 +315,7 @@ map('world2Hires', c('Canada', 'usa', 'Mexico', 'hawaii', 'ussr', 'China', 'Japa
 lines(x1,y1, lwd=2, col="#D55E00")
 lines(npi.x,npi.y, lwd=2, col="#0072B2")
 
-text(130, 24, "Study site", cex=1.2, col="#D55E00", pos=4)
+text(130, 25.2, "Study site", cex=1.2, col="#D55E00", pos=4)
 text(130, 20.5, "North Pacific Index", cex=1.2, col="#0072B2", pos=4)
 
 par(mgp=c(3,0,0))
