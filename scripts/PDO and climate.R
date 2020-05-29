@@ -195,6 +195,39 @@ ggarrange(scatter, int, ncol=2, nrow=1, labels=c("a)", "b)"),
           label.x = 0.05, label.y = 0.95)
 dev.off()
 
+##################
+# new vewrsion - vertical!
+##################
+scatter <- ggplot(dat, aes(NDJFM.PDO, value, color=plot.era)) +
+  theme_bw() +
+  geom_point() +
+  facet_wrap(~key, scales="free_y") +
+  scale_color_manual(values=cb[2:4]) +
+  geom_smooth(method="lm", se=F) +
+  xlab("PDO Index (Nov-Mar)") +
+  theme(legend.title = element_blank(), axis.title.y = element_blank(), legend.position = 'right')
+
+int <- ggplot(mdf_indv_arm, aes(x = value, fill = variable)) +
+  theme_bw() +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c(cb[2], cb[3], cb[4]), labels=c("1964-1988", "1989-2013", "2014-2019")) +
+  theme(legend.title = element_blank(), legend.position = 'right') +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "Intercept (scaled anomaly)",
+       y = "Posterior density") +
+  facet_wrap( ~ key, scales="free")
+
+
+# make a combined plot
+
+tiff("era-specific PDO and climate - vertical.tiff", 8, 7, units='in', res=300)
+# png("era-specific PDO and climate - vertical.png", 8, 7, units='in', res=300)
+ggarrange(scatter, int, ncol=2, nrow=1, labels=c("a)", "b)"),
+          label.x = 0.05, label.y = 0.95)
+dev.off()
+
+
+
 # plot slopes for SI
 slope <- ggplot(mdf_slope, aes(x = value, fill = variable)) +
   theme_bw() +
