@@ -38,8 +38,8 @@ dat3 <- read.csv("data/salmon.covariates.updated.ssh.eof.csv")
 dat$FMA.SSH.PC1 <- dat3$FMA.ssh.PC1.SODA.pred.by.GODAS[match(dat$year, dat3$year)]
 
 # now plot relative to PDO!
-colnames(dat)[c(7,4,5,6)] <- c("Sea surface height (PC1)",
-                               "Wind stress (pa)",
+colnames(dat)[c(8,4,5,6)] <- c("Sea surface height (PC1)",
+                               "Wind stress (Pa)",
                                "Sea surface temp. (ºC)",
                              "North Pacific Index (mb)")
 
@@ -238,7 +238,7 @@ print(int)
 # make a combined plot
 library(ggpubr)
 
-png("figs/era-specific PDO and climate updated.png", 8, 3.75, units='in', res=300)
+# png("figs/era-specific PDO and climate updated.png", 8, 3.75, units='in', res=300)
 
 tiff("figs/era-specific PDO and climate updated.tiff", 8, 3.75, units='in', res=300)
 ggarrange(scatter, int, ncol=2, nrow=1, labels=c("a)", "b)"),
@@ -248,20 +248,13 @@ dev.off()
 ##################
 # new vewrsion - vertical!
 ##################
-scatter <- ggplot(dat, aes(NDJFM.PDO, value, color=plot.era)) +
-  theme_bw() +
-  geom_point() +
-  facet_wrap(~key, scales="free_y") +
-  scale_color_manual(values=cb[2:4]) +
-  geom_smooth(method="lm", se=F) +
-  xlab("PDO Index (Nov-Mar)") +
-  theme(legend.title = element_blank(), axis.title.y = element_blank(), legend.position = 'right')
+
 
 int <- ggplot(mdf_indv_arm, aes(x = value, fill = variable)) +
   theme_bw() +
   geom_density(alpha = 0.7) +
   scale_fill_manual(values = c(cb[2], cb[3], cb[4]), labels=c("1964-1988", "1989-2013", "2014-2019")) +
-  theme(legend.title = element_blank(), legend.position = 'right') +
+  theme(legend.title = element_blank(), legend.position = 'top', legend.key.size = unit(3, 'mm')) +
   geom_vline(xintercept = 0, lty = 2) +
   labs(x = "Intercept (scaled anomaly)",
        y = "Posterior density") +
@@ -270,10 +263,10 @@ int <- ggplot(mdf_indv_arm, aes(x = value, fill = variable)) +
 
 # make a combined plot
 
-tiff("era-specific PDO and climate - vertical.tiff", 8, 7, units='in', res=300)
+tiff("figs/era-specific PDO and climate - vertical.tiff", 4, 7, units='in', res=300)
 # png("era-specific PDO and climate - vertical.png", 8, 7, units='in', res=300)
-ggarrange(scatter, int, ncol=2, nrow=1, labels=c("a)", "b)"),
-          label.x = 0.05, label.y = 0.95)
+ggarrange(scatter, int, ncol=1, nrow=2, labels=c("e)", "f)"),
+          label.x = 0.05, label.y = 0.95, font.label = "plain")
 dev.off()
 
 

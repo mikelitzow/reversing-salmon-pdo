@@ -223,7 +223,7 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 # use SVD on covariance
 # need to drop NAs!
 ssh.land <- is.na(colMeans(ssh.godas.fma))
-ssh.godas.fma <- ssh.godas.fma[,!land]
+ssh.godas.fma <- ssh.godas.fma[,!ssh.land]
 
 eof <- svd(cov(ssh.godas.fma))
 plot.ssh <- -eof$u[,1] # reversing to have the same sign as mean differences 
@@ -239,6 +239,102 @@ map('world2Hires',fill=F,xlim=c(130,250), ylim=c(20,66),add=T, lwd=2)
 
 
 # make a study site figure
+tiff("figs/study site figure.tiff", 4,3, units="in", res=300)
+# png("figs/study site figure.png", 8,5.5, units="in", res=300)
+par(mfrow=c(2,2), tcl=-0.2, cex.lab=0.6, cex.axis=0.6, mar=c(1,1,1,2), oma=c(0,1,0,0))
+
+mt.cex <- 1.1
+l.mar <- 3
+l.cex <- 1.3
+land.col <- "lightyellow3"
+xlim <- c(190, 233)
+ylim <- c(49,62)
+new.col <- oceColorsPalette(64)
+
+# location...
+# study site box
+x1 <- c(190,190,233,233,190)
+y1 <- c(49,62,62,49,49)
+
+# NPI box
+# calculate NDJFM NPI - 
+# 30º-65ºN, 160ºE-140ºW 
+npi.x <- c(160-1.25,160-1.25,221.25,221.25,160-1.25)
+npi.y <- c(30-1.25,66.25,66.25,30-1.25,30-1.25)
+
+plot(10,10, type="n", xlim=c(130,250), ylim=c(20,66), xlab="", ylab="", xaxt="n", yaxt="n")
+map('world2Hires', c('Canada', 'usa', 'Mexico', 'hawaii', 'ussr', 'China', 'Japan', 'South Korea', 'North Korea'), fill=T, add=T, lwd=0.5, col=land.col)
+
+# map('world2Hires',fill=F,add=T, lwd=1)
+lines(x1,y1, lwd=2, col="#D55E00")
+lines(npi.x,npi.y, lwd=2, col="#0072B2")
+
+text(165, 46, "Study site", cex=0.8, col="#D55E00", pos=4)
+text(135, 25.5, "North Pacific Index", cex=0.8, col="#0072B2", pos=4)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("140E", "160", "180", "160W", "140W", "120"), at= seq(140, 240, 20), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.1,0))
+axis(2, labels = c("60N", "50", "40", "30", "20"), at= seq(60,20,-10), las=1, tcl=0.25, lwd=0.5)
+
+mtext("a) Study site and North Pacific Index", adj=0.3, cex=0.7)
+
+############
+par(mar=c(1,1,1,0.5))
+z <- t(matrix(colMeans(SST), length(sst.y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+image.plot(sst.x,sst.y,z, col=new.col,  yaxt="n", xaxt="n", axis.args = list(mgp=c(3,0.5,0)),
+           zlim=c(4,9), xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
+box()
+map('world2Hires', c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col=land.col)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("160W", "150", "140", "130"), at= seq(200, 230, 10), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.1,0))
+axis(2, labels = c("60N", "58", "56", "54", "52", "50"), at= seq(60,50,-2), las=1, tcl=0.25, lwd=0.5)
+
+mtext("b) Sea surface temperature (°C)", adj=-0.1, cex=0.7)
+############
+
+z <- rep(NA, ncol(ssh.godas.fma))
+z[!ssh.land] <- plot.ssh 
+z <- t(matrix(z,length(y)))  
+image.plot(x,y,z, col=new.col,  yaxt="n", xaxt="n", axis.args = list(mgp=c(3,0.5,0)),
+           xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
+# contour(x, y, z, add=T) 
+map('world2Hires', c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col=land.col)
+points(360-145,50, pch=21, bg="#56B4E9", col="black", cex=1.5)
+text(360-145, 50, "Station Papa", pos=2, cex=0.8, col="#56B4E9")
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("160W", "150", "140", "130"), at= seq(200, 230, 10), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.1,0))
+axis(2, labels = c("60N", "58", "56", "54", "52", "50"), at= seq(60,50,-2), las=1, tcl=0.25, lwd=0.5)
+
+mtext("c) SSH (EOF1) and Station Papa", adj=0.2, cex=0.7)
+
+##########
+z <- t(matrix(plot.stress,length(y.stress)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+zlim <- c(0, max(z, na.rm=T))
+image.plot(x.stress,y.stress,z, col=new.col,  yaxt="n", xaxt="n", axis.args = list(mgp=c(3,0.5,0)),
+           zlim=zlim, xlim=xlim, ylim=ylim, legend.cex=l.cex, xlab="", ylab="")
+map('world2Hires', c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,70),add=T, lwd=0.5, col=land.col)
+gak.y <- 59 + (50.7/60)
+gak.x <- 360-149 + (28/60)
+points(gak.x, gak.y, pch=21, bg="#CC79A7", col="black", cex=1.7)
+text(gak.x-8, gak.y+1.3, "GAK1", col="#CC79A7", cex=0.8)
+
+par(mgp=c(3,0,0))
+axis(1, labels = c("160W", "150", "140", "130"), at= seq(200, 230, 10), las=1, tcl=0.25, lwd=0.5)
+par(mgp=c(3,0.1,0))
+axis(2, labels = c("60N", "58", "56", "54", "52", "50"), at= seq(60,50,-2), las=1, tcl=0.25, lwd=0.5)
+
+mtext("d) Wind stress (Pa) and GAK1 site", adj=0.2, cex=0.7)
+
+dev.off()
+
+
+# old version
+#####################
 tiff("figs/study site figure.tiff", 8,3.75, units="in", res=300)
 # png("figs/study site figure.png", 8,5.5, units="in", res=300)
 par(mfrow=c(2,2), tcl=-0.2, cex.lab=0.8, cex.axis=0.8, mar=c(1,2,1,0.5), oma=c(0,1,0,1))
