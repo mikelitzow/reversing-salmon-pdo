@@ -5,20 +5,20 @@ library(tidyverse)
 theme_set(theme_bw())
 
 
-# PDO isn't currently being updated on JISAO website - 
-# download from NCDC
+# download from SWFSC ERDDAP
+# and separate time field into year / month
 
-download.file("https://www.ncdc.noaa.gov/teleconnections/pdo/data.csv", "data/latest.pdo.csv")
+download.file("https://oceanview.pfeg.noaa.gov/erddap/tabledap/cciea_OC_PDO.csv?time%2CPDO&time%3E=1950-01-01&time%3C=2020-05-01T00%3A00%3A00Z", "data/latest.pdo.csv")
 
-temp <- read.csv("data/latest.pdo.csv")
+pdo <- read.csv("data/latest.pdo.csv", skip=1, col.names = c("time", "PDO"))
 
-year <- floor(as.numeric(rownames(temp))/100)
-month <- as.numeric(rownames(temp)) - year*100
-pdo <- as.numeric(as.character(temp[,1]))
+pdo <- pdo %>%
+  separate(time, c("year", "month","junk"), "-") %>%
+  select(-junk)
+ 
+pdo$month <- as.numeric(pdo$month) 
+pdo$year <- as.numeric(pdo$year) 
 
-pdo <- data.frame(year=year[2:length(year)],
-                  month=month[2:length(month)],
-                  pdo=pdo[2:length(pdo)])
 
 # and get a winter (NDJFM) value!
 pdo$winter.year = ifelse(pdo$month %in% 11:12, pdo$year+1, pdo$year)
@@ -26,39 +26,20 @@ pdo$winter.year = ifelse(pdo$month %in% 11:12, pdo$year+1, pdo$year)
 winter.pdo <- pdo %>%
   filter(month %in% c(11,12,1:3)) %>%
   group_by(winter.year) %>%
-  summarise(winter.pdo=mean(pdo))
-names(winter.pdo) <- c("Year", "NCDC.PDO1")
+  summarise(winter.pdo=mean(PDO))
+
+names(winter.pdo) <- c("Year", "PDO1")
+
+# get smoothed values of PDO for analysis
+# aligning left - i.e, year of and year after ocean entry
+winter.pdo$PDO2 <- rollmean(winter.pdo$PDO1, 2, align = "left", fill=NA) 
+winter.pdo$PDO3 <- rollmean(winter.pdo$PDO1, 3, align = "center", fill=NA) 
 
 # load salmon catch data
 dat <- read.csv("data/salmon.and.covariate.data.csv")
 
 # lag back to catch year to make the era definitions match up across spp.!
 dat$catch.year <- ifelse(dat$species=="Sockeye", dat$Year+2, dat$Year+1)
-
-# add NCDC version of PDO!
-dat <- left_join(dat, winter.pdo)
-
-# compare the new NCDC version of PDO with the version we were using before...
-check.dat <- dat %>%
-  select(Year, PDO1, NCDC.PDO1) %>%
-  pivot_longer(cols=-Year)
-
-ggplot(check.dat, aes(Year, value, color=name)) +
-  geom_line()
-
-# generally close - not such extreme positive values in NCDC version in recent years
-
-ggplot(dat, aes(PDO1, NCDC.PDO1)) +
-  geom_point()
-
-cor(dat$PDO1, dat$NCDC.PDO1) # 0.932...so better than my estimates!
-
-# these catch data are pre-lagged to ocean entry...
-# get smoothed values of NCDC PDO for analysis
-
-# aligning left - i.e, year of and year after ocean entry
-winter.pdo$NCDC.PDO2 <- rollmean(winter.pdo$NCDC.PDO1, 2, align = "left", fill=NA) 
-winter.pdo$NCDC.PDO3 <- rollmean(winter.pdo$NCDC.PDO1, 3, align = "center", fill=NA) 
 
 dat <- left_join(dat, winter.pdo)
 
@@ -91,9 +72,9 @@ for(s in spp){ # select spp.
                         data.frame(spp=s,
                                    era=e,
                                    lag=-4:4,
-                                   PDO1=ccf(temp$NCDC.PDO1, temp$catch, lag.max=4)$acf,
-                                   PDO2=ccf(temp$NCDC.PDO2, temp$catch, lag.max=4)$acf,
-                                   PDO3=ccf(temp$NCDC.PDO3, temp$catch, lag.max=4)$acf))
+                                   PDO1=ccf(temp$PDO1, temp$catch, lag.max=4)$acf,
+                                   PDO2=ccf(temp$PDO2, temp$catch, lag.max=4)$acf,
+                                   PDO3=ccf(temp$PDO3, temp$catch, lag.max=4)$acf))
     
   }
 }
@@ -130,8 +111,7 @@ ggsave("figs/PDO-catch correlations at different lags.png", width=5, height = 6,
 #############
 # now, save as a new data file for use in the stan models!
 dat <- dat %>%
-  select(Year, NCDC.PDO1, NCDC.PDO2, NCDC.PDO3, species, catch)
-
-names(dat)[2:4] <- c("PDO1", "PDO2", "PDO3")      
-
-write.csv(dat, "data/salmon.and.NCDC.PDO.csv", row.names = F)
+  select(-catch.year, -era, -species.grouped)
+  
+    
+write.csv(dat, "data/salmon.and.SWFSC.PDO.csv", row.names = F)
