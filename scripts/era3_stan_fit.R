@@ -9,7 +9,7 @@ library(overlapping)
 
 # NOTE THAT THESE YEARS ARE ALREADY LAGGED TO ENTRY YEAR
 # raw.dat <- read.csv("salmon.and.covariate.data.csv")
-raw.dat <- read.csv("data/salmon.and.NCDC.PDO.csv")
+raw.dat <- read.csv("data/salmon.and.SWFSC.PDO.csv")
 
 # re-lagging to catch year to make this consistent across spp. -
 # we will use catch year to distinguish among eras...
@@ -25,6 +25,7 @@ cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
 ## Prep data -----------------------------------------------
 dat3 <- na.omit(raw.dat)
 dat3 <- plyr::ddply(dat3, .(species), transform, pdo = scale(PDO3))
+dat3 <- plyr::ddply(dat3, .(species), transform, sst = scale(SST3))
 
 # dat3 <- plyr::ddply(dat3, .(species), transform, sst = (9/5)*SST3+32) # changing to raw ºF!
 
@@ -40,6 +41,7 @@ start <- c(1, int.start)
 ## Data for Stan models
 dat3_stan <- list(y = dat3$catch,
                   x1 = dat3$pdo,
+                  x2 = dat3$sst,
                   y_start = start,
                   y_end = end,
                   n_species = length(unique(dat3$species)),
@@ -103,12 +105,23 @@ scatter.sst <- ggplot(dat3) +
   geom_smooth(method = "lm", se = FALSE) +
   facet_wrap( ~era.labs) +
   scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
-  theme_bw() + ylab("Catch anomaly") + xlab("Winter sea surface temperature (ºF)") +
+  theme_bw() + ylab("Catch anomaly") + xlab("Winter sea surface temperature (SD)") +
   theme(legend.title = element_blank(), legend.position = 'top')
 
 print(scatter.sst)
 
-ggsave("three panel catch and sst by era.png", width=5, height=3, units='in')
+# compare with one-panel version allowing dome-shaped relationship
+scatter.sst <- ggplot(dat3) +
+  aes(x = sst, y = catch, color = species) +
+  geom_point() +
+  geom_smooth(method = "gam", se = FALSE) +
+  scale_color_manual(values=c(cb[2], cb[7], cb[6], cb[4])) +
+  theme_bw() + ylab("Catch anomaly") + xlab("Winter sea surface temperature (SD)") +
+  theme(legend.title = element_blank(), legend.position = 'top')
+
+print(scatter.sst) 
+# I think this dome-shaped model will suffer from autocorrelation in the residuals!
+
 
 # and make a scatter plot across all three eras for talk!
 dat4 <- dat3 %>%
@@ -366,6 +379,12 @@ era_mean_slopes <- mbeta %>%
   group_by(variable) %>%
   summarize(mean=mean(value))
 
+mean(malpha$value[malpha$variable=="era3"])-mean(malpha$value[malpha$variable=="era2"])
+mean(malpha$value[malpha$variable=="era3"])-mean(malpha$value[malpha$variable=="era1"])
+
+mean(mbeta$value[mbeta$variable=="era3"])-mean(mbeta$value[mbeta$variable=="era2"])
+mean(mbeta$value[mbeta$variable=="era3"])-mean(mbeta$value[mbeta$variable=="era1"])
+
 era_mean_slopes[3,2] - era_mean_slopes[2,2]
 era_mean_slopes[3,2] - era_mean_slopes[1,2]
 
@@ -393,16 +412,18 @@ slopes <- ggplot(mbeta, aes(x = value, fill = variable)) +
   labs(x = "Slope (scaled anomaly)",
        y = "Posterior density") +
   theme(legend.title = element_blank(), legend.position = 'top',
-        legend.direction = "horizontal")
+        legend.direction = "horizontal", legend.key.size = unit(4, 'mm'))
 print(slopes)
 
 
-
-png("figs/era-specific catches and 3-yr PDO.png", 8, 3, units='in', res=300)
+png("figs/Fig 3 - era-specific catches and 3-yr PDO.png", 8, 3, units='in', res=300)
 ggpubr::ggarrange(scatter, slopes, ncol=2, nrow=1, labels=c("a)", "b)"), widths = c(1, 0.7), label.y = 0.95)
 dev.off()
 
 
+tiff("figs/era-specific catches and 3-yr PDO.tiff", 8, 3, units='in', res=300)
+ggpubr::ggarrange(scatter, slopes, ncol=2, nrow=1, labels=c("a)", "b)"), widths = c(1, 0.7), label.y = 0.95)
+dev.off()
 ## Diagnostics
 posterior <- as.array(era3_hier_arm)
 mcmc_rhat(rhat(era3_hier_arm))
@@ -476,3 +497,4 @@ g <- ggplot(dat3) +
   labs(x = "PDO", y = "Catch anomaly", color = "Species") +
   theme_bw()
 print(g)
+
