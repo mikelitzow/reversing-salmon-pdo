@@ -25,12 +25,12 @@ raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat
 # load ERSST
 # uncomment these lines to download data
 # identify latest year and month needed
-# year <- 2019
-# month <- "12"
-# 
-# URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
-# 
-# download.file(URL, "data/North.Pacific.ersst")
+year <- 2019
+month <- "12"
+
+URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
+
+download.file(URL, "data/North.Pacific.ersst")
 
 # open netcdf file of SST data
 nc <- nc_open("data/North.Pacific.ersst")
