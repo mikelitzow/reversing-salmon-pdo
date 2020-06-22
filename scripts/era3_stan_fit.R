@@ -98,7 +98,7 @@ scatter <- ggplot(dat3) +
 
 print(scatter)
 
-# and the same plot for SST for another talk!
+# and the same plot for SST 
 scatter.sst <- ggplot(dat3) +
   aes(x = sst, y = catch, color = species) +
   geom_point() +
@@ -498,3 +498,81 @@ g <- ggplot(dat3) +
   theme_bw()
 print(g)
 
+######
+# adding stan models for catch-SST relationship
+
+## 3 era: hierarchical --> model for manuscript ----------------
+era3_hier_arm <- stan_glmer(catch ~ era + sst + sst:era + (era + sst + sst:era | species),
+                            data = dat3,
+                            chains = 4, cores = 4, thin = 1,
+                            warmup = 1000, iter = 4000, refresh = 0,
+                            adapt_delta = 0.99,
+                            prior = normal(location = 0, scale = 5, autoscale = FALSE),
+                            prior_intercept = normal(location = 0, scale = 5, autoscale = FALSE),
+                            prior_aux = student_t(df = 3, location = 0, scale = 5, autoscale = FALSE),
+                            prior_covariance = decov(regularization = 1,
+                                                     concentration = 1,
+                                                     shape = 1, scale = 1))
+
+# do predictions for recent era
+newdata = expand.grid("era"=unique(dat3$era),
+                      sst=c(mean(dat3$sst[which(dat3$era=="era3")]),
+                            mean(dat3$sst[which(dat3$era=="era3")])+1), species=unique(dat3$species)) %>%
+  dplyr::filter(era=="era3")
+pred = posterior_predict(era3_hier_arm, newdata=newdata)
+newdata$mean_pred = round(apply(pred,2,mean), 3)
+
+fixef(era3_hier_arm)
+ranef(era3_hier_arm)
+coef(era3_hier_arm)
+era3_hier_arm$covmat
+print(era3_hier_arm)
+
+mu_beta  <- as.matrix(era3_hier_arm, pars = c("sst", "eraera2:sst", "eraera3:sst"))
+coef_beta <- data.frame(coef = "Slope",
+                        era1 = mu_beta[ , 1],
+                        era2 = mu_beta[ , 1] + mu_beta[ , 2],
+                        era3 = mu_beta[ , 1] + mu_beta[ , 3])
+mu_alpha <- as.matrix(era3_hier_arm, pars = c("(Intercept)", "eraera2", "eraera3"))
+coef_alpha <- data.frame(coef = "Intercept",
+                         era1 = mu_alpha[ , 1],
+                         era2 = mu_alpha[ , 1] + mu_alpha[ , 2],
+                         era3 = mu_alpha[ , 1] + mu_alpha[ , 3])
+mbeta  <- reshape2::melt(coef_beta, id.vars = "coef")
+malpha <- reshape2::melt(coef_alpha, id.vars = "coef")
+mdf_hier <- rbind(mbeta, malpha)
+
+
+era_mean_slopes <- mbeta %>%
+  group_by(variable) %>%
+  summarize(mean=mean(value))
+
+mean(malpha$value[malpha$variable=="era3"])-mean(malpha$value[malpha$variable=="era2"])
+mean(malpha$value[malpha$variable=="era3"])-mean(malpha$value[malpha$variable=="era1"])
+
+mean(mbeta$value[mbeta$variable=="era3"])-mean(mbeta$value[mbeta$variable=="era2"])
+mean(mbeta$value[mbeta$variable=="era3"])-mean(mbeta$value[mbeta$variable=="era1"])
+
+era_mean_slopes[3,2] - era_mean_slopes[2,2]
+era_mean_slopes[3,2] - era_mean_slopes[1,2]
+
+# # and % positive / negative slopes by era!
+# sum(mbeta$value[mbeta$variable=="era1"]>0)/ length(mbeta$value[mbeta$variable=="era1"])
+# sum(mbeta$value[mbeta$variable=="era2"]>0)/ length(mbeta$value[mbeta$variable=="era2"])
+# sum(mbeta$value[mbeta$variable=="era3"]>0)/ length(mbeta$value[mbeta$variable=="era3"])
+
+
+# saveRDS(int_overlap$OV,file="output/salmon_int_overlap.rds")
+# saveRDS(slope_overlap$OV,file="output/salmon_slope_overlap.rds")
+
+slopes <- ggplot(mbeta, aes(x = value, fill = variable)) +
+  theme_bw() +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c(cb[2], cb[3], cb[4]),
+                    labels=c("1965-1988", "1989-2013", "2014-2019")) +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "Slope (scaled anomaly)",
+       y = "Posterior density") +
+  theme(legend.title = element_blank(), legend.position = 'top',
+        legend.direction = "horizontal", legend.key.size = unit(4, 'mm'))
+print(slopes)
