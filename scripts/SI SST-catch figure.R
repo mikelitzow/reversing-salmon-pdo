@@ -24,6 +24,7 @@ temp <- raw.dat %>%
   mutate(SST3=scale(SST3)) %>%
   pivot_longer(cols=c(-Year, -era))
 
+
 temp <- na.omit(temp)
 
 change <- temp$name=="SST3"
