@@ -132,8 +132,23 @@ new.dat$era <- ifelse(new.dat$catch.year <= 1988, "1965-1988", "1989-2019")
 cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
         "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
+new.dat$order <- ifelse(new.dat$species=="Pink-odd", 1,
+                        ifelse(new.dat$species=="Pink-even", 2,
+                               ifelse(new.dat$species=="Sockeye", 3, 4)))
+                        
+new.dat$species <- reorder(new.dat$species, new.dat$order)
+
+change <- new.dat$name=="SST1"
+new.dat$name[change] <- "SST-1yr"
+new.dat$name[!change] <- "SST-3yr"
 
 ggplot(new.dat, aes(value, catch, color=era)) +
   geom_point() +
   geom_smooth(method="gam", se=F) +
-  facet_grid(species ~ name)
+  facet_grid(species ~ name) +
+  ylab("Catch anomaly") +
+  xlab("SST (°C)") +
+  labs(color = "Catch year") +
+  scale_color_manual(values=cb[c(2,6)])
+
+ggsave("summer sst - catch.png", width=6, height=6, units="in", res=300)
