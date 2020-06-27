@@ -44,6 +44,8 @@ panel.1<- ggplot(temp, aes(Year, value, color=name)) +
 
 panel.1
 
+ggsave("figs/SI - winter sst and catch time series.png", width=6, height=3.5, units="in")
+
 temp2 <- temp %>%
   select(-order) %>%
   pivot_wider(names_from = name, values_from = value) 
@@ -72,3 +74,37 @@ panel.2 <- ggplot(temp2, aes(SST, mean.catch, color=catch.year)) +
 png("figs/SI fig - two panel SST-catch.png", 6, 6, units='in', res=300)
 ggpubr::ggarrange(panel.1, panel.2, ncol=1, nrow=2, labels=c("a)", "b)"))
 dev.off()  
+
+#######################################
+# and a panel looking at absolute SST (not scaled anomalies)
+# make a first panel of SST3 and catch for each spp. group, plotted against entry year
+temp <- raw.dat %>%
+  select(catch.year, SST3, species, catch, era)
+temp <- na.omit(temp)
+
+temp$era <- ifelse(temp$catch.year <= 1988, "1965-1988", "1989-2019")
+
+temp$order <- ifelse(temp$species=="Pink-odd", 1,
+                        ifelse(temp$species=="Pink-even", 2,
+                               ifelse(temp$species=="Sockeye", 3, 4)))
+
+temp$species <- reorder(temp$species, temp$order)
+
+# and add threshold temp from Abdul-Aziz et al.
+
+temp2 <- data.frame(species=unique(temp$species))
+
+temp2$threshold <- ifelse(temp2$species=="Coho", 9, 
+                         ifelse(temp2$species=="Sockeye", 7, 8.5))
+
+ggplot(temp, aes(SST3, catch, color=era)) +
+  geom_point() +
+  geom_vline(data=temp2, aes(xintercept = threshold), lty=2) +
+  facet_wrap(~species, scales="free") +
+  geom_smooth(method="gam", se=F) +
+  ylab("Catch anomaly") +
+  xlab("SST (°C, 3-yr mean)") +
+  labs(color = "Catch year") +
+  scale_color_manual(values=cb[c(2,6)])
+
+ggsave("figs/SI - winter SST and species catches.png", width=6, height=4, units='in')
