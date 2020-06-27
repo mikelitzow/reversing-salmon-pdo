@@ -25,12 +25,12 @@ raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat
 # load ERSST
 # uncomment these lines to download data
 # identify latest year and month needed
-year <- 2019
-month <- "12"
+# year <- 2019
+# month <- "12"
+# 
+# URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
 
-URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
-
-download.file(URL, "data/North.Pacific.ersst")
+# download.file(URL, "data/North.Pacific.ersst")
 
 # open netcdf file of SST data
 nc <- nc_open("data/North.Pacific.ersst")
@@ -142,11 +142,25 @@ change <- new.dat$name=="SST1"
 new.dat$name[change] <- "SST-1yr"
 new.dat$name[!change] <- "SST-3yr"
 
+# and add threshold temp from Abdul-Aziz et al.
+
+temp2 <- data.frame(species=rep(unique(new.dat$species), each=2),
+                    name=c("SST-1yr", "SST-3yr"))
+
+
+temp2$threshold <- ifelse(temp2$species=="Sockeye", 12, 13)
+
+ggplot(temp, aes(SST3, catch, color=era)) +
+  geom_point() +
+  geom_vline(data=temp2, aes(xintercept = threshold), lty=2) +
+  facet_wrap(~species, scales="free") +
+
 
 ggplot(new.dat, aes(value, catch, color=era)) +
   geom_point() +
+  geom_vline(data=temp2, aes(xintercept = threshold), lty=2) +
   geom_smooth(method="gam", se=F) +
-  facet_grid(species ~ name) +
+  facet_grid(species ~ name, scales="free") +
   ylab("Catch anomaly") +
   xlab("SST (°C)") +
   labs(color = "Catch year") +
