@@ -45,6 +45,8 @@ panel.1<- ggplot(temp, aes(Year, value, color=name)) +
 
 panel.1
 
+ggsave("figs/SI - winter sst and catch time series.png", width=6, height=4, units="in")
+
 temp2 <- temp %>%
   select(-order) %>%
   pivot_wider(names_from = name, values_from = value) 
