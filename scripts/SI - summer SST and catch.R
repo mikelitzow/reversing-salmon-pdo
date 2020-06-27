@@ -142,6 +142,7 @@ change <- new.dat$name=="SST1"
 new.dat$name[change] <- "SST-1yr"
 new.dat$name[!change] <- "SST-3yr"
 
+
 ggplot(new.dat, aes(value, catch, color=era)) +
   geom_point() +
   geom_smooth(method="gam", se=F) +
@@ -151,4 +152,4 @@ ggplot(new.dat, aes(value, catch, color=era)) +
   labs(color = "Catch year") +
   scale_color_manual(values=cb[c(2,6)])
 
-ggsave("summer sst - catch.png", width=6, height=6, units="in", res=300)
+ggsave("figs/summer sst - catch.png", width=6, height=6, units="in")

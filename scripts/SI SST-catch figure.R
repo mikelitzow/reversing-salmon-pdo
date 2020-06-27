@@ -17,7 +17,6 @@ cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
 
 
 # make a first panel of SST3 and catch for each spp. group, plotted against entry year
-
 temp <- raw.dat %>%
   select(Year, SST3, species, catch, era) %>%
   pivot_wider(names_from = species, values_from = catch) %>%
