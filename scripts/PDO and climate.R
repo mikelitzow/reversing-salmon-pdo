@@ -1,17 +1,7 @@
-library(ncdf4)
-library(zoo)
 library(gplots)
-library(dplyr)
-library(maps)
-library(mapdata)
-library(chron)
-library(fields)
 library(tidyr)
-library(nlme)
-library(ggplot2)
-library(MARSS)
 library(overlapping)
-library(RNetCDF)
+
 
 dat <- read.csv("data/climate.data.csv")
 
