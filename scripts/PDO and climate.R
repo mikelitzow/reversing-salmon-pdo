@@ -14,6 +14,7 @@ library(overlapping)
 library(RNetCDF)
 
 dat <- read.csv("data/climate.data.csv")
+
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 # excluding variables showing negative results (these are plotted separately below)
@@ -22,8 +23,8 @@ dat <- dat %>%
   select(-Papa, -GAK1.sal, -NDJFM.PDO) %>%
   filter(year > 1964)
 
-# add NCDC PDO values
-dat2 <- read.csv("data/salmon.and.NCDC.PDO.csv")
+# add SWFSC PDO values
+dat2 <- read.csv("data/salmon.and.SWFSC.PDO.csv")
 
 dat2 <- dat2 %>%
   group_by(Year) %>%
@@ -64,8 +65,6 @@ scatter <- ggplot(dat, aes(NDJFM.PDO, value, color=plot.era)) +
   geom_smooth(method="lm", se=F) +
   xlab("PDO Index (Nov-Mar)") +
   theme(legend.title = element_blank(), axis.title.y = element_blank(), legend.position = 'top')
-
-ggsave("figs/PDO vs NPI ssh sst stress updated with stress PC1.png", width = 5, height = 5, units="in")
 
 # and try with stan models
 library(rstan)
