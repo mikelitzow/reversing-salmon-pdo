@@ -30,7 +30,7 @@ dat <- left_join(dat, dat2)
 colnames(dat)[c(1,2)] <- c("Papa index (ºN, Dec-Feb)",
                            "GAK1 salinity (psu, Feb-Apr)")
 dat <- dat %>%
-  gather(key, value, -NDJFM.PDO, -era)
+  gather(key, value, -NDJFM.PDO, -era, -year)
 
 dat$plot.era <- ifelse(dat$era==1, "1964-1988",
                        ifelse(dat$era==2, "1989-2013", "2014-2019"))
@@ -48,7 +48,7 @@ scatter <- ggplot(dat, aes(NDJFM.PDO, value, color=plot.era)) +
   theme(legend.title = element_blank(), axis.title.y = element_blank())
 
 # rename pdo
-names(dat)[2] <- "pdo"
+names(dat)[3] <- "pdo"
 
 # remove units for posterior plots
 
