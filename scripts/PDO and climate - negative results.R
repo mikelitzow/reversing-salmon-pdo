@@ -182,12 +182,3 @@ png("figs/SI - era-specific PDO and GAK1-Papa.png", 6.5, 7, units='in', res=300)
 ggpubr::ggarrange(scatter, int, slope, ncol=1, nrow=3, labels=c("a)", "b)", "c)"))
 dev.off()
 
-
-
-# make a combined plot
-library(ggpubr)
-
-png("figs/era-specific PDO - Papa and salinity.png", 6.5, 5, units='in', res=300)
-ggarrange(scatter, int, ncol=1, nrow=2, labels=c("a)", "b)"))
-dev.off()
-
