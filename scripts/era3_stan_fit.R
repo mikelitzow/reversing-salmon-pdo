@@ -329,3 +329,16 @@ slopes <- ggplot(mbeta, aes(x = value, fill = variable)) +
   theme(legend.title = element_blank(), legend.position = 'top',
         legend.direction = "horizontal", legend.key.size = unit(4, 'mm'))
 print(slopes)
+
+# plot intercepts
+int <- ggplot(malpha, aes(x = value, fill = variable)) +
+  theme_bw() +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c(cb[2], cb[3], cb[4]), labels=c("1965-1988", "1989-2013", "2014-2019")) +
+  theme(legend.title = element_blank()) +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "Intercept (scaled anomaly)",
+       y = "Posterior density") 
+print(int)
+
+ggsave("figs/SI - salmon PDO intercepts.png", width=4, height=3)
