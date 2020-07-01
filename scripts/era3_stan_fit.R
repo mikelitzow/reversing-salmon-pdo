@@ -50,20 +50,6 @@ dat3_stan <- list(y = dat3$catch,
                   era2 = ifelse(dat3$catch.year %in% 1989:2013, 1, 0),
                   era3 = ifelse(dat3$catch.year >= 2014, 1, 0))
 
-
-
-## Plot data -----------------------------------------------
-
-# ## Catch (color) + SST (black)
-# g <- ggplot(dat3) +
-#   geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
-#   geom_line(aes(x = Year, y = catch, color = species)) +
-#   geom_line(data = dat3[dat3$species == "Coho", ], aes(x = Year, y = sst),
-#             color = "black", size = 1) +
-#   theme_bw()
-# print(g)
-
-
 ## Catch distribution
 g <- ggplot(dat3) +
   aes(x = species, y = catch) +
