@@ -190,6 +190,7 @@ dev.off()
 tiff("figs/era-specific catches and 3-yr PDO.tiff", 8, 3, units='in', res=300)
 ggpubr::ggarrange(scatter, slopes, ncol=2, nrow=1, labels=c("a)", "b)"), widths = c(1, 0.7), label.y = 0.95)
 dev.off()
+
 ## Diagnostics
 posterior <- as.array(era3_hier_arm)
 mcmc_rhat(rhat(era3_hier_arm))
