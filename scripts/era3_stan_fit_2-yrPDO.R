@@ -9,7 +9,7 @@ library(overlapping)
 
 # NOTE THAT THESE YEARS ARE ALREADY LAGGED TO ENTRY YEAR
 # raw.dat <- read.csv("salmon.and.covariate.data.csv")
-raw.dat <- read.csv("data/salmon.and.NCDC.PDO.csv")
+raw.dat <- read.csv("data/salmon.and.SWFSC.PDO.csv")
 
 # re-lagging to catch year to make this consistent across spp. -
 # we will use catch year to distinguish among eras...
@@ -18,10 +18,6 @@ raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat
 raw.dat[["era"]] <- ifelse(raw.dat$catch.year <= 1988, "era1",
   ifelse(raw.dat$catch.year %in% 1989:2013, "era2", "era3"))
                            
-
-# old way here!
-# raw.dat[["era"]] <- ifelse(raw.dat$Year <= 1986, "era1",
-#                            ifelse(raw.dat$Year %in% 1987:2011, "era2", "era3"))
 
 cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
         "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -112,11 +108,6 @@ slope_overlap = overlapping::overlap(x = list(slope1 = mu_beta[,1],slope2=mu_bet
 int_overlap = overlapping::overlap(x = list(int1 = mu_alpha[ , 1],int2=mu_alpha[ , 2],int3=mu_alpha[ , 3]))
 
 
-# 
-# 
-# saveRDS(int_overlap$OV,file="salmon_int_overlap.rds")
-# saveRDS(slope_overlap$OV,file="salmon_slope_overlap.rds")
-
 slopes2 <- ggplot(mbeta, aes(x = value, fill = variable)) +
   theme_bw() +
   geom_density(alpha = 0.7) +
@@ -126,7 +117,7 @@ slopes2 <- ggplot(mbeta, aes(x = value, fill = variable)) +
   labs(x = "Slope (scaled anomaly)",
        y = "Posterior density") +
   theme(legend.title = element_blank(), legend.position = 'bottom',
-        legend.direction = "horizontal")
+        legend.direction = "horizontal", legend.key.size = unit(4, 'mm'))
 print(slopes2)
 
 # reset era names for plotting
@@ -238,11 +229,6 @@ slope_overlap = overlapping::overlap(x = list(slope1 = mu_beta[,1],slope2=mu_bet
 int_overlap = overlapping::overlap(x = list(int1 = mu_alpha[ , 1],int2=mu_alpha[ , 2],int3=mu_alpha[ , 3]))
 
 
-# 
-# 
-# saveRDS(int_overlap$OV,file="salmon_int_overlap.rds")
-# saveRDS(slope_overlap$OV,file="salmon_slope_overlap.rds")
-
 slopes1 <- ggplot(mbeta, aes(x = value, fill = variable)) +
   theme_bw() +
   geom_density(alpha = 0.7) +
@@ -252,7 +238,7 @@ slopes1 <- ggplot(mbeta, aes(x = value, fill = variable)) +
   labs(x = "Slope (scaled anomaly)",
        y = "Posterior density") +
   theme(legend.title = element_blank(), legend.position = 'bottom',
-        legend.direction = "horizontal")
+        legend.direction = "horizontal", legend.key.size = unit(4, 'mm'))
 print(slopes1)
 
 # reset era names for plotting
@@ -277,7 +263,7 @@ print(scatter1)
 
 fill <- ggplot() + theme_void()
 
-png("figs/era-specific catches and 1-y and 2-yrPDO.png", 6, 6.5, units='in', res=300)
+png("figs/era-specific catches and 1-y and 2-yrPDO.png", 8, 6.5, units='in', res=300)
 ggpubr::ggarrange(ggpubr::ggarrange(fill, fill, nrow=1, widths = c(1, 0.7)),
                   ggpubr::ggarrange(scatter2, slopes2, nrow=1, widths = c(1, 0.7)),
                   ggpubr::ggarrange(fill, fill, nrow=1, widths = c(1, 0.7)),

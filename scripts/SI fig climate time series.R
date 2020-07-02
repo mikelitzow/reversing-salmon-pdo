@@ -2,8 +2,8 @@ library(tidyverse)
 
 dat <- read.csv("data/climate.data.csv")
 
-# add NCDC PDO values
-dat2 <- read.csv("data/salmon.and.NCDC.PDO.csv")
+# add SWFSC PDO values
+dat2 <- read.csv("data/salmon.and.SWFSC.PDO.csv")
 
 dat2 <- dat2 %>%
   group_by(Year) %>%
@@ -66,3 +66,4 @@ ggplot(dat, aes(Year, value)) +
   theme(axis.title = element_blank())
 
 ggsave("figs/SI climate time series.png", width=5, height=6, units='in', dpi=300)
+ls()

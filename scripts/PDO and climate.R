@@ -1,7 +1,7 @@
 library(gplots)
 library(tidyr)
 library(overlapping)
-
+library(tidyverse)
 
 dat <- read.csv("data/climate.data.csv")
 
@@ -181,9 +181,6 @@ slope_tab <- plyr::ddply(mdf_slope, .(key, variable), summarize,
 
 
 # get intercept / slope differences in units of SD
-int_tab[3,3]-int_tab[1,3] # NPI era3 - era1
-
-
 slope_tab[3,3]-slope_tab[1,3] # NPI era3 - era1
 slope_tab[3,3]-slope_tab[2,3] # NPI era3 - era2
 
@@ -208,6 +205,7 @@ int_tab[9,3]-int_tab[8,3] # ssh era3 - era2
 
 int_tab[12,3]-int_tab[10,3] # stress era3 - era1
 int_tab[12,3]-int_tab[11,3] # stress era3 - era2
+
 
 write.csv(int_tab, "output/climate intercept table.csv")
 
