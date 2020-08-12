@@ -1,3 +1,5 @@
+# this script examines catch-PDO relationships at different lags / degrees of PDO smoothing
+
 library(zoo)
 library(tidyverse)
 
