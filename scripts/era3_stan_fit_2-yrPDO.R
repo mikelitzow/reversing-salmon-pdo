@@ -1,4 +1,8 @@
 ## Bayesian Catch:PDO reversal analysis
+
+# this script examines catch-PDO relationships with PDO data smoothed with 2-yr running means
+# and relationships with unsmoothed PDO data
+
 library(plyr)
 library(tidyverse)
 library(rstan)
