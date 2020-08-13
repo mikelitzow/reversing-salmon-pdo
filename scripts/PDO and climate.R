@@ -211,30 +211,9 @@ write.csv(int_tab, "output/climate intercept table.csv")
 
 write.csv(slope_tab, "output/climate slope table.csv")
 
-int <- ggplot(mdf_indv_arm, aes(x = value, fill = variable)) +
-  theme_bw() +
-  geom_density(alpha = 0.7) +
-  scale_fill_manual(values = c(cb[2], cb[3], cb[4]), labels=c("1964-1988", "1989-2013", "2014-2019")) +
-  theme(legend.title = element_blank(), legend.position = 'top') +
-  geom_vline(xintercept = 0, lty = 2) +
-  labs(x = "Intercept (scaled anomaly)",
-       y = "Posterior density") +
-  facet_wrap( ~ key, scales="free")
-print(int)
 
 # make a combined plot
 library(ggpubr)
-
-# png("figs/era-specific PDO and climate updated.png", 8, 3.75, units='in', res=300)
-
-tiff("figs/era-specific PDO and climate updated.tiff", 8, 3.75, units='in', res=300)
-ggarrange(scatter, int, ncol=2, nrow=1, labels=c("a)", "b)"),
-          label.x = 0.05, label.y = 0.95)
-dev.off()
-
-##################
-# new vewrsion - vertical!
-##################
 
 
 int <- ggplot(mdf_indv_arm, aes(x = value, fill = variable)) +
