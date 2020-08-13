@@ -66,4 +66,3 @@ ggplot(dat, aes(Year, value)) +
   theme(axis.title = element_blank())
 
 ggsave("figs/SI climate time series.png", width=5, height=6, units='in', dpi=300)
-ls()
