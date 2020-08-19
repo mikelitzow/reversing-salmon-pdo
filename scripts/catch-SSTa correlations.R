@@ -15,124 +15,7 @@ library(mapdata)
 library(zoo)
 library(oce)
 
-
-# # I have catch data in spearate files for each management area
-# # clean up and combine data sets
-# 
-# ch <- read.csv("Chignik catch.csv")
-# 
-# # drop Chinook and change to tall
-# ch <- ch %>%
-#   select(-Chinook) %>%
-#   gather(species, catch, -Year)
-# 
-# ch$area <- "Chignik"
-# 
-# kd <- read.csv("Kodiak catch.csv")
-# 
-# # drop Chinook and change to tall
-# kd <- kd %>%
-#   select(-Chinook) %>%
-#   gather(species, catch, -Year)
-# 
-# kd$area <- "Kodiak"
-# 
-# sp <- read.csv("South Alaska Peninsula catch.csv")
-# 
-# colnames(sp) <- c("Year", "Chinook", "Sockeye", "Coho", "Pink", "Chum")
-# 
-# # drop Chinook and change to tall
-# sp <- sp %>%
-#   select(-Chinook) %>%
-#   gather(species, catch, -Year)
-# 
-# sp$area <- "S. Peninsula"
-# 
-# ci <- read.csv("Cook Inlet catch.csv")
-# 
-# colnames(ci) <- c("Year", "Sockeye", "Coho", "Pink", "Chum")
-# 
-# # change to tall
-# ci <- ci %>%
-#   gather(species, catch, -Year)
-# 
-# ci$area <- "Cook Inlet"
-# 
-# pws <- read.csv("Prince William Sound catch.csv")
-# 
-# # drop Chinook and change to tall
-# pws <- pws %>%
-#   select(-Chinook) %>%
-#   gather(species, catch, -Year)
-# 
-# pws$area <- "Prince William Sound"
-# 
-# se <- read.csv("Southeast Alaska catch.csv")
-# 
-# # drop Chinook and change to tall
-# se <- se %>%
-#   select(-Chinook) %>%
-#   gather(species, catch, -Year)
-# 
-# se$area <- "Southeast"
-# 
-# # combine and limit to 1965-present
-# raw.dat <- rbind(sp, ch, kd, ci, pws, se)
-# raw.dat <- filter(raw.dat, Year >= 1965)
-# 
-# # change 0s (2019) to NA!
-# change <- raw.dat$catch==0
-# raw.dat$catch[change] <- NA
-# 
-# # but 2018 Chignik catch is really 0!
-# raw.dat$catch[raw.dat$Year==2018 & raw.dat$area=="Chignik"] <- 0
-# 
-# raw.dat <- raw.dat %>%
-#   group_by(species, Year) %>%
-#   summarise(log(sum(catch), 10)) 
-# colnames(raw.dat)[3] <- "log.catch"
-# 
-# ggplot(raw.dat, aes(Year, log.catch, color=species)) +
-#   theme_bw() +
-#   geom_line()
-# 
-# # remove Chum
-# raw.dat <- raw.dat %>%
-#   filter(species != "Chum")
-# 
-# raw.dat$even.odd <- ifelse(odd(raw.dat$Year)==T,"odd", "even")
-# 
-# raw.dat$species.plot <- paste(raw.dat$species, raw.dat$even.odd, sep="-")
-# 
-# raw.dat$species.plot <- ifelse(raw.dat$species=="Pink", raw.dat$species.plot, raw.dat$species)
-# 
-# ggplot(raw.dat, aes(Year, log.catch, color=species.plot)) +
-#   theme_bw() +
-#   geom_line()
-# 
-# # don't know why I'm having touble with tidyverse!
-# raw.dat$species <- as.factor(raw.dat$species)
-# raw.dat$species.plot <- as.factor(raw.dat$species.plot)
-# 
-# spp <- levels(raw.dat$species.plot)
-# raw.dat <- raw.dat %>%
-#   select(Year, species.plot, log.catch)
-# 
-# raw.dat <- raw.dat[,2:4]
-# 
-# raw.dat <- raw.dat %>%
-#   spread(species.plot, log.catch)
-# 
-# raw.dat[,2:5] <- scale(raw.dat[,2:5])
-# 
-# raw.dat <- raw.dat %>%
-#   gather(key="species", value="catch", -Year)
-# 
-# raw.dat <- na.omit(raw.dat)
-# 
-# # now lag to mean ocean entry for each species
-# # catch-1 for pink/coho, catch-2 for sockeye
-# raw.dat$entry.year <- ifelse(raw.dat$species %in% c("Pink-even", "Pink-odd", "Coho"), raw.dat$Year-1, raw.dat$Year-2)
+# plot correlation maps for salmon catch and gridded SST
 
 raw.dat <- read.csv("data/salmon.and.covariate.data.csv")
 
@@ -140,18 +23,6 @@ raw.dat <- read.csv("data/salmon.and.covariate.data.csv")
 # re-lag to define catch year!
 raw.dat$catch.year <- ifelse(raw.dat$species=="Sockeye", raw.dat$Year+2, raw.dat$Year+1)
 
-# load ERSST
-# uncomment these lines to download data
-# identify latest year and month needed
-# year <- 2019
-# month <- "07"
-# 
-# URL <- paste("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(", year, "-", month, "-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(70)][(120):1:(250)]", sep="")
-# 
-# download.file(URL, "data/North.Pacific.ersst")
-
-# open netcdf file of SST data
-# nc <- nc_open("/Users/MikeLitzow 1/Documents/R/climate-data/data/North.Pacific.ersst")
 nc <- nc_open("data/North.Pacific.ersst")
 
 # extract dates
